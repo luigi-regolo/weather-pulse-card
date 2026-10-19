@@ -152,3 +152,49 @@ test('hourly forecast hides rain fields when unavailable and shows both when pre
   assert.doesNotMatch(missing,/wp-hour-rain/);
   assert.doesNotMatch(missing,/Pioggia non disponibile/);
 });
+
+test('hourly cloud percentage is data-driven including zero and full cloud',()=>{
+  assert.equal(get('wpCloudCoverage(17.2)'),'17,2%');
+  assert.equal(get('wpCloudCoverage(100)'),'100%');
+  assert.equal(get('wpCloudCoverage(0)'),'0%');
+  assert.equal(get('wpCloudCoverage(null)'),null);
+  assert.equal(get('wpCloudCoverage(-1)'),null);
+  assert.equal(get('wpCloudCoverage(101)'),null);
+});
+test('hourly cloud appears when supplied and disappears when absent',()=>{
+  const withCloud=get('wpHoursHTML')([{datetime:'2099-10-19T12:00:00Z',temperature:21.1,condition:'partlycloudy',cloud_coverage:17.2,precipitation:0}],'°C','Europe/Rome',false,'mm');
+  assert.match(withCloud,/title="Copertura nuvolosa"/);
+  assert.match(withCloud,/Nuvole<\/span><span>17,2%/);
+  assert.match(withCloud,/0 mm/);
+  const withoutCloud=get('wpHoursHTML')([{datetime:'2099-10-19T13:00:00Z',temperature:19}],'°C','Europe/Rome',false,'mm');
+  assert.doesNotMatch(withoutCloud,/wp-hour-cloud/);
+});
+test('daily weather details avoid duplicate rain separators',()=>{
+  const card=Object.create(get('WeatherPulseCard.prototype'));
+  const day=new Date(Date.now()+2*86400000).toISOString();
+  card._hass={config:{latitude:45.4,longitude:9.1,time_zone:'Europe/Rome',unit_system:{accumulated_precipitation:'mm'}}};
+  card._config={moon_entity:'',alert_entity:'',show_hourly_chart:false};
+  card._forecastState={daily:'ready',hourly:'idle'};
+  card._forecast={daily:[{datetime:day,temperature:17,templow:16,condition:'rainy',precipitation:27.2}],hourly:[]};
+  card._zone=()=> 'Europe/Rome';
+  card._alert=()=>({status:'unknown'});
+  const entity={state:'rainy',attributes:{temperature:17,precipitation_unit:'mm'}};
+  const withRain=card._popup(entity);
+  assert.match(withRain,/Max 17°C ·\s*Min 16°C · Quantità 27,2 mm/);
+  assert.doesNotMatch(withRain,/Min 16°C\s*·\s*·/);
+  card._forecast.daily=[{datetime:day,temperature:17,templow:16,condition:'rainy'}];
+  const withoutRain=card._popup(entity);
+  assert.match(withoutRain,/Max 17°C ·\s*Min 16°C<\/div>/);
+  assert.doesNotMatch(withoutRain,/Min 16°C\s*·/);
+});
+test('current conditions show cloud only when present',()=>{
+  const card=Object.create(get('WeatherPulseCard.prototype'));
+  card._hass={config:{latitude:45.4,longitude:9.1,time_zone:'Europe/Rome',unit_system:{accumulated_precipitation:'mm'}}};
+  card._config={moon_entity:'',alert_entity:'',show_hourly_chart:false};
+  card._forecastState={daily:'idle',hourly:'idle'};
+  card._forecast={daily:[],hourly:[]};
+  card._zone=()=> 'Europe/Rome';
+  card._alert=()=>({status:'unknown'});
+  assert.match(card._popup({state:'cloudy',attributes:{cloud_coverage:85}}),/>Copertura nuvolosa<\/span><strong>85%<\/strong>/);
+  assert.doesNotMatch(card._popup({state:'cloudy',attributes:{}}),/>Copertura nuvolosa<\/span>/);
+});
