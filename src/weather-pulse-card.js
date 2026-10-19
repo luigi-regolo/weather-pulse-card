@@ -572,185 +572,193 @@ class WeatherPulseCard extends HTMLElement {
       </div>`;
   }
 }
-const WP_EDITOR_CSS = `
-:host{display:block;font-family:var(--ha-font-family-body,Roboto,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif);font-size:13px;color:var(--primary-text-color)}
+const WP_EDITOR_CSS=`
+:host{display:block;color:var(--primary-text-color,#18221c);font-family:var(--ha-font-family-body,Roboto,Arial,sans-serif);font-size:var(--ha-font-size-m,14px)}
 *,*:before,*:after{box-sizing:border-box}
-.wp-editor{padding:2px 0 8px}
-.wp-tabs{display:flex;flex-wrap:wrap;gap:5px;padding:0 0 12px;border-bottom:1px solid var(--divider-color);margin-bottom:12px}
-.wp-tab{border:1px solid transparent;border-radius:999px;padding:7px 10px;background:var(--secondary-background-color);color:var(--secondary-text-color);font:inherit;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap}
-.wp-tab.active{background:var(--primary-color,#0a7156);color:white;border-color:var(--primary-color,#0a7156)}
-.wp-heading{font-size:14px;font-weight:700;margin:17px 1px 6px}
-.wp-hint{font-size:12px;line-height:1.5;color:var(--secondary-text-color);margin:4px 1px 14px}
-.wp-field{margin:15px 0}.wp-label{display:block;font-size:12px;font-weight:650;margin:0 0 8px}
-.wp-input{display:block;width:100%;border:1px solid var(--divider-color);border-radius:12px;padding:11px;background:var(--secondary-background-color);color:var(--primary-text-color);font:inherit;font-size:13px}
-.wp-row{display:flex;justify-content:space-between;align-items:center;gap:10px;border:1px solid var(--divider-color);background:var(--secondary-background-color);border-radius:13px;padding:12px;margin-top:10px}
-.wp-row label{flex:1;font-size:12px}.wp-row input{width:17px;height:17px}
-.wp-selector{display:block;min-width:0}
-.wp-editor ha-selector{display:block;--mdc-theme-primary:var(--primary-color,#0a7156)}
-.wp-clear-alert{background:var(--secondary-background-color);color:var(--primary-text-color);border:1px solid var(--divider-color);border-radius:12px;padding:9px 12px;font:inherit;font-size:12px;margin-top:8px;cursor:pointer}
-.wp-input:focus-visible,.wp-tab:focus-visible,.wp-clear-alert:focus-visible{outline:2px solid var(--primary-color,#0a7156);outline-offset:2px}
-.wp-fallback{display:none}.wp-no-native .wp-fallback{display:block}.wp-no-native .wp-native{display:none}
+.wp-editor{display:block}
+.wp-tabs{display:flex;gap:5px;overflow-x:auto;padding-bottom:14px;border-bottom:1px solid var(--divider-color,#dfe5df)}
+.wp-tab{border:0;background:none;color:var(--secondary-text-color,#536359);border-radius:13px;padding:10px 13px;white-space:nowrap;font:inherit;cursor:pointer}
+.wp-tab.active{color:var(--primary-text-color,#17231c);background:var(--secondary-background-color,#f0f2ef);font-weight:650}
+.wp-heading{font-size:21px;font-weight:500;margin:25px 0 9px}
+.wp-desc{color:var(--secondary-text-color,#55665a);font-size:13px;line-height:1.5;margin-bottom:24px}
+.wp-field{display:block;margin:20px 0}
+.wp-label{font-size:14px;margin-bottom:10px}
+.wp-input{display:block;width:100%;background:var(--secondary-background-color,#f0f2ef);color:var(--primary-text-color,#18221c);border:0;border-bottom:1px solid var(--divider-color,#a5afa5);padding:14px 13px;min-height:50px;border-radius:11px 11px 0 0;font:inherit}
+.wp-editor ha-selector{display:block;width:100%;--mdc-theme-primary:var(--primary-color,#0b7457)}
+.wp-fallback{display:none}.wp-no-native .wp-fallback{display:block}.wp-no-native ha-selector{display:none}
+.wp-row{border-bottom:1px solid var(--divider-color,#e3e7e3);padding:13px 0;display:flex;align-items:center;justify-content:space-between;gap:15px}
+.wp-row label{flex:1}.wp-row input[type=checkbox]{width:18px;height:18px;accent-color:var(--primary-color,#0c7157)}
+.wp-muted{font-size:12px;line-height:1.5;color:var(--secondary-text-color,#5e6c62)}
+.wp-action{background:var(--secondary-background-color,#eff2ee);border:1px solid var(--divider-color,#dbe2db);color:var(--primary-text-color,#18221c);padding:10px 14px;border-radius:14px;font:inherit;cursor:pointer}
+.wp-action:disabled{opacity:.45;cursor:not-allowed}
+.wp-tiny{font-size:11px;color:var(--secondary-text-color,#55665a);margin:9px 0}
+.wp-input:focus-visible,.wp-action:focus-visible,.wp-tab:focus-visible,.wp-clear:focus-visible{outline:2px solid var(--primary-color,#0b7457);outline-offset:2px}
+.wp-more{margin:19px 0 10px;border-bottom:1px solid var(--divider-color,#dfe5df);padding:0 0 11px}
+.wp-more summary{cursor:pointer;padding:13px 4px;color:var(--secondary-text-color,#56665d);font-size:13px;list-style:none}
+.wp-more summary:before{content:"▸";font-size:10px;margin-right:10px}
+.wp-more[open] summary:before{content:"▾"}.wp-more summary::-webkit-details-marker{display:none}
+.wp-more-body{padding:2px 0 8px}
+.wp-selector-line{display:flex;align-items:center;gap:8px;min-width:0}
+.wp-selector-grow{flex:1;min-width:0}
+.wp-clear{display:flex;align-items:center;justify-content:center;flex:none;width:36px;height:36px;background:var(--secondary-background-color,#eef1ef);border:1px solid var(--divider-color,#dfe5df);border-radius:50%;cursor:pointer;color:var(--secondary-text-color,#57655c);padding:0}
+.wp-clear ha-icon{width:18px;height:18px;--mdc-icon-size:18px}
+.wp-camera-group{padding-bottom:20px}
+.wp-camera-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:20px}.wp-section-picker{display:flex;gap:5px;overflow-x:auto;border-bottom:1px solid var(--divider-color,#dfe5df);padding:14px 0 12px}.wp-section-chip{border:0;border-radius:13px;padding:10px 12px;flex:none;background:none;color:var(--secondary-text-color,#536359);font:inherit;font-size:13px;cursor:pointer}.wp-section-chip.active{background:var(--secondary-background-color,#f0f2ef);color:var(--primary-text-color,#17231c);font-weight:650}
+.wp-camera-head strong{font-size:15px;font-weight:600}
+.wp-controls{display:flex;gap:6px;flex:none}
+.wp-controls .wp-action{padding:5px 9px;border-radius:10px}
+.wp-add{display:block;margin:12px 0 25px}
+.wp-notice{margin-top:10px;color:var(--error-color,#bd4b42);font-size:12px}
 `;
+
 class WeatherPulseCardEditor extends HTMLElement {
-  constructor() {
+  constructor(){
     super();
     this.attachShadow({mode:'open'});
     this._config=wpConfig();
     this._hass=null;
     this._tab='meteo';
-    this.shadowRoot.addEventListener('change',event=>this._change(event));
-    this.shadowRoot.addEventListener('click',event=>this._click(event));
+    this._section='previsioni';
+    this._details={};
+    this._nativeTried=false;
+    this.shadowRoot.addEventListener('click',e=>this._click(e));
+    this.shadowRoot.addEventListener('change',e=>this._change(e));
   }
-  setConfig(config) {
-    this._config=wpConfig(config);
-    this._render();
-  }
-  set hass(hass) {
+  set hass(hass){
     this._hass=hass;
+    this.shadowRoot.querySelectorAll('ha-selector').forEach(el=>el.hass=hass);
+  }
+  setConfig(raw){
+    const next=wpConfig(raw);
+    if(JSON.stringify(next)===JSON.stringify(this._config)&&this.shadowRoot.querySelector('.wp-editor'))return;
+    this._config=next;
     this._render();
   }
-  _update(key,value) {
-    this._config=wpConfig({...this._config,[key]:value});
-    this.dispatchEvent(new CustomEvent('config-changed',{
-      detail:{config:this._config},bubbles:true,composed:true
-    }));
+  connectedCallback(){this._render();this._ensureNative();}
+  async _ensureNative(){
+    if(this._nativeTried)return;
+    this._nativeTried=true;
+    if(!customElements.get('ha-selector')){
+      try{
+        const helper=await window.loadCardHelpers?.();
+        await helper?.importSelector?.();
+      }catch{}
+    }
     this._render();
   }
-  _click(event) {
-    const tab=event.target?.closest?.('[data-tab]');
-    if(tab){
-      this._tab=tab.dataset.tab;
-      this._render();
-      return;
-    }
-    if(event.target?.closest?.('[data-clear-alert]'))this._update('alert_entity','');
-    if(event.target?.closest?.('[data-clear-moon]'))this._update('moon_entity','');
+  _update(patch){
+    this._config=wpConfig({...this._config,...patch});
+    this.dispatchEvent(new CustomEvent('config-changed',{detail:{config:this._config},bubbles:true,composed:true}));
+    this._render();
   }
-  _change(event) {
-    const input=event.target;
-    const key=input?.dataset?.field;
-    if(!key)return;
-    const validators={
-      weather_entity:wpEntity,
-      moon_entity:wpMoonEntity,
-      alert_entity:wpAlertEntity
-    };
-    if(Object.prototype.hasOwnProperty.call(validators,key)){
-      this._update(key,validators[key](input.value));
-      return;
-    }
-    if(['show_location','show_hourly_chart'].includes(key)){
-      this._update(key,!!input.checked);
-      return;
-    }
-    if(['title','eyebrow','location_label','theme_mode'].includes(key)){
-      this._update(key,input.value);
-    }
+  _field(label,inner,help=''){
+    return `<div class="wp-field"><div class="wp-label">${wpEscape(label)}</div>${inner}${help?`<div class="wp-tiny">${wpEscape(help)}</div>`:''}</div>`;
   }
-  _options(domain,selected) {
-    const values=Object.keys(this._hass?.states||{}).filter(id=>{
-      if(domain==='weather')return id.startsWith('weather.');
-      if(domain==='moon')return id.startsWith('sensor.');
-      return /^(sensor|binary_sensor)\./.test(id);
-    }).sort();
-    return '<option value="">Nessuna entità selezionata</option>'+
-      values.map(id=>`<option value="${wpEscape(id)}" ${selected===id?'selected':''}>${wpEscape(id)}</option>`).join('');
+  _text(key,label,max=70){
+    return this._field(label,`<input class="wp-input" type="text" maxlength="${max}" data-key="${key}" value="${wpEscape(this._config[key]||'')}"/>`);
   }
-  _entityField(key,label,domain,clear) {
-    const value=this._config[key]||'';
-    const note=clear&&value?`<button type="button" class="wp-clear-alert" data-clear-${domain}="1">Rimuovi entità</button>`:'';
-    return `<div class="wp-field">
-      <label class="wp-label">${wpEscape(label)}</label>
-      <div class="wp-native wp-selector" data-selector="${domain}"></div>
-      <select class="wp-input wp-fallback" data-field="${key}" aria-label="${wpEscape(label)}">
-        ${this._options(domain,value)}</select>${note}</div>`;
+  _select(key,label,options){
+    return this._field(label,`<select class="wp-input" data-key="${key}">
+      ${options.map(([value,caption])=>`<option value="${value}" ${this._config[key]===value?'selected':''}>${wpEscape(caption)}</option>`).join('')}
+    </select>`);
   }
-  _check(key,label,help='') {
+  _check(key,label,help=''){
     return `<div class="wp-row"><label for="wp-${key}">${wpEscape(label)}
-      ${help?`<div class="wp-hint" style="margin:4px 0 0">${wpEscape(help)}</div>`:''}</label>
-      <input id="wp-${key}" type="checkbox" data-field="${key}" ${this._config[key]?'checked':''}></div>`;
+      ${help?`<div class="wp-muted">${wpEscape(help)}</div>`:''}</label>
+      <input type="checkbox" id="wp-${key}" data-key="${key}" ${this._config[key]?'checked':''}/></div>`;
   }
-  _text(key,label,limit=60) {
-    return `<div class="wp-field"><label class="wp-label" for="wp-${key}">${wpEscape(label)}</label>
-      <input class="wp-input" id="wp-${key}" data-field="${key}" value="${wpEscape(this._config[key])}" maxlength="${limit}"></div>`;
+  _entityField(key,label,hint=''){
+    const value=this._config[key];
+    const placeholder=key==='weather_entity'?'weather.*':key==='moon_entity'?'sensor.*':'sensor.* / binary_sensor.*';
+    const field=`<div class="wp-selector-line"><div class="wp-selector-grow">
+        <div data-entity-slot="${key}"></div>
+        <div class="wp-fallback"><input class="wp-input" type="text" data-key="${key}"
+          placeholder="${placeholder}" value="${wpEscape(value||'')}"/></div>
+      </div>${value?`<button type="button" class="wp-clear" data-clear="${key}" aria-label="Rimuovi ${wpEscape(label)}"
+        title="Rimuovi ${wpEscape(label)}">${wpIcon('close')}</button>`:''}</div>`;
+    return this._field(label,field,hint);
   }
-  _content() {
-    const c=this._config;
-    if(this._tab==='meteo') {
-      return `<div class="wp-heading">Previsioni meteorologiche</div>
-        <p class="wp-hint">Seleziona un'entità meteo configurata in Home Assistant. La disponibilità delle previsioni orarie e giornaliere dipende dall'integrazione selezionata.</p>
-        ${this._entityField('weather_entity','Entità meteo','weather',false)}`;
+  _meteo(){
+    const sections=[['previsioni','Previsioni'],['sole','Sole e luna'],['allerte','Allerte']];
+    let body='<div class="wp-heading">Configurazione meteo</div>'+
+      '<div class="wp-desc">Seleziona una sezione, poi configura le sue entità e le opzioni disponibili.</div>'+
+      `<div class="wp-section-picker">${sections.map(([id,label])=>`<button type="button" class="wp-section-chip ${id===this._section?'active':''}"
+        data-section="${id}" aria-pressed="${id===this._section}">${label}</button>`).join('')}</div>`;
+    if(this._section==='previsioni'){
+      body+='<div class="wp-heading">Previsioni meteorologiche</div>'+
+        this._entityField('weather_entity','Entità meteorologica (weather.*)',
+          'Seleziona l’entità meteo già presente in Home Assistant. La disponibilità delle previsioni dipende dalla sorgente scelta.')+
+        '<div class="wp-muted">Sono utilizzate le previsioni orarie e giornaliere fornite da Home Assistant.</div>';
     }
-    if(this._tab==='sole'){
-      return `<div class="wp-heading">Sole e luna</div>
-        <p class="wp-hint">Alba, tramonto e durata del giorno utilizzano la posizione e il fuso orario configurati in Home Assistant. Non è necessario selezionare un'entità per il sole.</p>
-        ${this._entityField('moon_entity','Entità fase lunare (facoltativa)','moon',true)}
-        <p class="wp-hint">Per mostrare la fase lunare nel popup seleziona un sensore che espone una fase supportata, come quello dell'integrazione Moon di Home Assistant.</p>`;
+    if(this._section==='sole'){
+      body+='<div class="wp-heading">Sole e luna</div><div class="wp-desc">Alba e tramonto utilizzano la posizione e il fuso orario configurati in Home Assistant.</div>'+
+        this._entityField('moon_entity','Fase lunare (facoltativa)',
+          'Seleziona un sensore dell’integrazione Moon, se disponibile. Senza sensore lunare vengono mostrati solo i dati solari.');
     }
-    if(this._tab==='allerte'){
-      return `<div class="wp-heading">Allerte meteorologiche</div>
-        <p class="wp-hint">Funzione facoltativa. Seleziona soltanto un sensore che rappresenta realmente le allerte meteo. Le informazioni dipendono dalla sorgente configurata.</p>
-        ${this._entityField('alert_entity','Entità allerta (facoltativa)','alert',true)}
-        <p class="wp-hint">Quando lo stato della sorgente è sconosciuto, la card non dichiara che le allerte siano assenti. Per le decisioni di sicurezza consulta sempre le autorità competenti.</p>`;
+    if(this._section==='allerte'){
+      body+='<div class="wp-heading">Allerte meteorologiche</div><div class="wp-desc">Le allerte sono facoltative. Seleziona un’entità che rappresenta effettivamente allerte meteo.</div>'+
+        this._entityField('alert_entity','Entità allerta (facoltativa)',
+          'La card mostra soltanto allerte segnalate dalla sorgente. Uno stato sconosciuto non significa assenza di allerte.')+
+        '<div class="wp-muted">Per i provvedimenti di sicurezza verifica sempre gli avvisi delle autorità competenti.</div>';
     }
-    if(this._tab==='aspetto'){
-      return `<div class="wp-heading">Aspetto Edera</div>
-        <p class="wp-hint">Colori e dimensioni coerenti con la dashboard Edera. Il punto verde finale viene aggiunto automaticamente al titolo.</p>
-        ${this._text('title','Titolo',60)}
-        ${this._text('eyebrow','Intestazione superiore',60)}
-        <div class="wp-field"><label class="wp-label" for="wp-theme">Tema</label>
-          <select class="wp-input" id="wp-theme" data-field="theme_mode">
-          ${[['auto','Automatico (Home Assistant)'],['light','Light Edera'],['dark','Dark Edera']]
-            .map(([value,label])=>`<option value="${value}" ${c.theme_mode===value?'selected':''}>${label}</option>`).join('')}
-          </select></div>
-        ${this._check('show_location','Mostra località (facoltativo)')}
-        ${c.show_location?this._text('location_label','Nome località',70):''}`;
-    }
-    if(this._tab==='avanzate'){
-      return `<div class="wp-heading">Impostazioni avanzate</div>
-        <p class="wp-hint">La card utilizza i dati delle integrazioni già disponibili in Home Assistant. Non richiede una chiave API dedicata.</p>
-        ${this._check('show_hourly_chart','Mostra il grafico delle temperature orarie',
-          'Le previsioni orarie rimangono visibili anche quando il grafico è disattivato.')}
-        <p class="wp-hint">I dati non disponibili vengono indicati come tali. Nessun dato della dashboard è inviato dalla card a servizi esterni.</p>`;
-    }
+    return body;
+  }
+  _content(){
+    if(this._tab==='meteo')return this._meteo();
+    if(this._tab==='aspetto')return '<div class="wp-heading">Aspetto Edera</div><div class="wp-desc">Personalizza il titolo e il tema mantenendo lo stile Edera Light/Dark.</div>'+
+      this._text('title','Titolo',60)+this._text('eyebrow','Intestazione superiore',60)+
+      this._select('theme_mode','Tema',[['auto','Automatico (Home Assistant)'],['light','Light Edera'],['dark','Dark Edera']])+
+      this._check('show_location','Mostra località','La località resta nascosta finché non abiliti questa opzione.')+
+      (this._config.show_location?this._text('location_label','Nome località',70):'');
+    if(this._tab==='avanzate')return '<div class="wp-heading">Opzioni avanzate</div><div class="wp-desc">Impostazioni facoltative per i dettagli meteo.</div>'+
+      this._check('show_hourly_chart','Mostra grafico delle prossime 8 ore',
+        'Le previsioni orarie rimangono visibili nel popup anche se il grafico è disattivato.')+
+      '<div class="wp-muted">La card utilizza i dati delle integrazioni Home Assistant configurate e non richiede chiavi API dedicate.</div>';
     return '';
   }
-  _selector(target,domain) {
-    const selectors={weather:{entity:{domain:'weather'}},moon:{entity:{domain:'sensor'}},alert:{entity:{domain:['sensor','binary_sensor']}}};
-    const key={weather:'weather_entity',moon:'moon_entity',alert:'alert_entity'}[domain];
-    const validators={weather:wpEntity,moon:wpMoonEntity,alert:wpAlertEntity};
-    const node=document.createElement('ha-selector');
-    node.hass=this._hass;
-    node.selector=selectors[domain];
-    node.value=this._config[key]||'';
-    node.setAttribute('aria-label',{weather:'Entità meteo',moon:'Entità fase lunare',alert:'Entità allerta'}[domain]);
-    node.addEventListener('value-changed',event=>{
-      event.stopPropagation();
-      if(event.detail && Object.prototype.hasOwnProperty.call(event.detail,'value')){
-        this._update(key,validators[domain](event.detail.value));
-      }
-    });
-    target.appendChild(node);
+  _click(event){
+    const tab=event.target.closest('[data-tab]');
+    if(tab){this._tab=tab.dataset.tab;this._render();return;}
+    const section=event.target.closest('[data-section]');
+    if(section){this._section=section.dataset.section;this._render();return;}
+    const clear=event.target.closest('[data-clear]');
+    if(clear){this._update({[clear.dataset.clear]:''});}
   }
-  _render() {
+  _change(event){
+    const input=event.target,key=input?.dataset?.key;
+    if(!key)return;
+    const value=input.type==='checkbox'?input.checked:input.value;
+    if(key==='weather_entity'){this._update({[key]:wpEntity(value)});return;}
+    if(key==='moon_entity'){this._update({[key]:wpMoonEntity(value)});return;}
+    if(key==='alert_entity'){this._update({[key]:wpAlertEntity(value)});return;}
+    if(['title','eyebrow','theme_mode','show_hourly_chart','show_location','location_label'].includes(key))this._update({[key]:value});
+  }
+  _render(){
     if(!this.isConnected)return;
-    const tabs=[['meteo','Meteo'],['sole','Sole e luna'],['allerte','Allerte'],
-      ['aspetto','Aspetto'],['avanzate','Avanzate']];
-    this.shadowRoot.innerHTML=`<style>${WP_EDITOR_CSS}</style><div class="wp-editor">
-      <div class="wp-tabs" role="group" aria-label="Impostazioni Weather Pulse">
-        ${tabs.map(([value,label])=>`<button type="button" class="wp-tab ${this._tab===value?'active':''}"
-          data-tab="${value}" aria-pressed="${this._tab===value?'true':'false'}">${label}</button>`).join('')}
-      </div>${this._content()}</div>`;
-    const wrapper=this.shadowRoot.querySelector('.wp-editor');
-    if(!customElements.get('ha-selector')){
-      wrapper.classList.add('wp-no-native');
-      return;
-    }
-    this.shadowRoot.querySelectorAll('[data-selector]').forEach(target=>{
-      this._selector(target,target.dataset.selector);
+    const tabs=[['meteo','Meteo'],['aspetto','Aspetto'],['avanzate','Avanzate']];
+    this.shadowRoot.innerHTML=`<style>${WP_EDITOR_CSS}</style>
+      <div class="wp-editor"><div class="wp-tabs">${tabs.map(([id,label])=>`<button type="button" class="wp-tab ${this._tab===id?'active':''}"
+      data-tab="${id}" aria-pressed="${id===this._tab}">${label}</button>`).join('')}</div>${this._content()}</div>`;
+    const root=this.shadowRoot.querySelector('.wp-editor');
+    if(!customElements.get('ha-selector')){root.classList.add('wp-no-native');return;}
+    const selectors={weather_entity:{entity:{domain:'weather'}},
+      moon_entity:{entity:{domain:'sensor'}},
+      alert_entity:{entity:{domain:['sensor','binary_sensor']}}};
+    const validators={weather_entity:wpEntity,moon_entity:wpMoonEntity,alert_entity:wpAlertEntity};
+    this.shadowRoot.querySelectorAll('[data-entity-slot]').forEach(slot=>{
+      const key=slot.dataset.entitySlot;
+      if(!selectors[key])return;
+      const el=document.createElement('ha-selector');
+      el.hass=this._hass;el.selector=selectors[key];el.value=this._config[key]||'';
+      el.setAttribute('aria-label',key==='weather_entity'?'Entità meteorologica':key==='moon_entity'?'Fase lunare':'Entità allerta');
+      el.addEventListener('value-changed',event=>{
+        event.stopPropagation();
+        if(!event.detail||!Object.prototype.hasOwnProperty.call(event.detail,'value'))return;
+        this._update({[key]:validators[key](event.detail.value)});
+      });
+      slot.appendChild(el);
     });
   }
-  connectedCallback() {this._render();}
 }
 if (!customElements.get(WP_TAG)) customElements.define(WP_TAG,WeatherPulseCard);
 if (!customElements.get(WP_EDITOR_TAG)) customElements.define(WP_EDITOR_TAG,WeatherPulseCardEditor);
