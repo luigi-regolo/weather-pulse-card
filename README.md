@@ -43,6 +43,8 @@ Displayed information depends on the capabilities of the configured weather inte
 
 Weather Pulse Card can be installed through HACS using the custom GitHub repository.
 
+[![Open Weather Pulse Card in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=luigi-regolo&repository=weather-pulse-card&category=plugin)
+
 1. Open **HACS** in Home Assistant.
 2. Search for **Weather Pulse Card** in the catalog.
 3. If it is not available in the default catalog, open the HACS menu and select **Custom repositories**.
