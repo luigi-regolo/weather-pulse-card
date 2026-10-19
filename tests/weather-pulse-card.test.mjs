@@ -71,10 +71,14 @@ test('solar information absent without valid coordinates',()=>{
 test('polar night without events',()=>{
   assert.equal(get('wpSolarDay(new Date("2026-12-21T12:00:00Z"),"Europe/Oslo",78.22,15.65,null).rise'),null);
 });
-test('visual editor has five panels',()=>{
+test('visual editor uses shared Edera tabs and grouped meteo sections',()=>{
   const editor=get('Object.create(WeatherPulseCardEditor.prototype)');
   editor._config=get('wpConfig()');editor._hass={states:{}};
-  for(const tab of ['meteo','sole','allerte','aspetto','avanzate']){
+  for(const tab of ['meteo','aspetto','avanzate']){
     editor._tab=tab;assert.ok(editor._content().length>90,tab);
+  }
+  editor._tab='meteo';
+  for(const section of ['previsioni','sole','allerte']){
+    editor._section=section;assert.ok(editor._content().length>90,section);
   }
 });
