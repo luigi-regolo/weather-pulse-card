@@ -82,3 +82,36 @@ test('visual editor uses shared Edera tabs and grouped meteo sections',()=>{
     editor._section=section;assert.ok(editor._content().length>90,section);
   }
 });
+
+test('card type and Lovelace settings survive visual editing',()=>{
+  const c=get('wpConfig({weather_entity:"weather.meteo",visibility:[{condition:"screen"}],grid_options:{columns:6}})');
+  assert.equal(c.type,'custom:weather-pulse-card');
+  assert.equal(c.weather_entity,'weather.meteo');
+  assert.equal(c.visibility.length,1);
+  assert.equal(c.grid_options.columns,6);
+});
+test('stub config supplies required card type',()=>{
+  assert.equal(get('WeatherPulseCard.getStubConfig().type'),'custom:weather-pulse-card');
+});
+test('perceived temperature is absent',()=>{
+  assert.doesNotMatch(src,/Percepita|perceived|Temperatura percepita/);
+});
+test('popup Edera typography and close button are aligned',()=>{
+  const css=get('WP_CSS');
+  assert.match(css,/\.wp-dialog-head strong\{flex:1;font-size:17px;font-weight:600/);
+  assert.match(css,/\.wp-close\{display:flex;align-items:center;justify-content:center;line-height:0/);
+  assert.match(css,/\.wp-close ha-icon\{display:block;flex:none;margin:0/);
+});
+test('weather entity selection keeps type and defers editor repaint',async()=>{
+  const Editor=get('WeatherPulseCardEditor');
+  const ed=Object.create(Editor.prototype);
+  ed.isConnected=true;ed._config=get('wpConfig()');ed._renderScheduled=false;ed._duringConfigEvent=false;
+  ed.shadowRoot={querySelector(){return {};}};
+  let renders=0,emitted=0;
+  ed._render=()=>renders++;
+  ed.dispatchEvent=e=>{emitted++;assert.equal(e.detail.config.type,'custom:weather-pulse-card');ed.setConfig(e.detail.config);return true;};
+  ed._update({weather_entity:'weather.meteo'});
+  assert.equal(emitted,1);assert.equal(renders,0);
+  await Promise.resolve();
+  assert.equal(renders,1);
+});
