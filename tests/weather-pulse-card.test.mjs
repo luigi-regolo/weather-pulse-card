@@ -211,12 +211,15 @@ test('weather card fits the dashboard column and adapts narrow cards',()=>{
 });
 test('popup has compact viewport boundaries and a scrollable interior',()=>{
   const css=get('WP_CSS');
-  assert.match(css,/\.wp-dialog\{[^}]*width:min\(350px,100%\)/);
-  assert.match(css,/\.wp-dialog\{[^}]*max-height:min\(68dvh,560px\)/);
+  assert.match(css,/\.wp-dialog\{[^}]*width:min\(390px,100%\)/);
+  assert.match(css,/@media\(max-width:599px\)\{\.wp-backdrop\{[^}]*\}\.wp-dialog\{width:min\(350px,100%\)/);
+  assert.match(css,/\.wp-dialog\{[^}]*max-height:min\(82dvh,720px\)/);
+  assert.match(css,/@media\(max-width:599px\)\{\.wp-backdrop\{[^}]*\}\.wp-dialog\{[^}]*max-height:min\(68dvh,560px\)/);
   assert.match(css,/\.wp-dialog\{[^}]*overflow-y:auto;overflow-x:hidden/);
   assert.doesNotMatch(css,/\.wp-dialog\{[^}]*max-height:90vh/);
   assert.match(css,/\.wp-backdrop\{[^}]*safe-area-inset-top/);
-  assert.match(css,/\.wp-dialog-head\{[^}]*position:sticky;top:0/);
+  assert.match(css,/\.wp-dialog-head\{display:flex;align-items:center;gap:10px;min-height:38px;margin-bottom:10px\}/);
+  assert.doesNotMatch(css,/\.wp-dialog-head\{[^}]*position:sticky/);
   assert.match(css,/\.wp-hour-scroll\{[^}]*overflow-x:auto;max-width:100%/);
 });
 
@@ -238,4 +241,18 @@ test('popup remains viewport-positioned outside its responsive layout container'
   assert.match(markup,/<div class="wp-container"><div class="wp-shell wp-light">/);
   assert.match(markup,/<\/button>\s*<\/div><\/div>\s*<div class="wp-backdrop wp-light"/);
   assert.match(markup,/class="wp-dialog"/);
+});
+
+test('tablet modal has camera-grid style width and scrollable header',()=>{
+  const css=get('WP_CSS');
+  assert.match(css,/\.wp-dialog\{[^}]*border-radius:26px;[^}]*padding:20px;width:min\(390px,100%\)/);
+  assert.match(css,/\.wp-dialog\{[^}]*max-height:min\(82dvh,720px\)/);
+  assert.match(css,/\.wp-dialog\{[^}]*overflow-y:auto;overflow-x:hidden/);
+  assert.match(css,/\.wp-dialog-head\{display:flex;align-items:center;gap:10px;min-height:38px;margin-bottom:10px\}/);
+  assert.doesNotMatch(css,/\.wp-dialog-head\{[^}]*position:sticky/);
+});
+test('phone popup stays narrow and tablet landscape remains inside viewport',()=>{
+  const css=get('WP_CSS');
+  assert.match(css,/@media\(max-width:599px\)\{\.wp-backdrop\{[^}]*\}\.wp-dialog\{width:min\(350px,100%\);max-height:min\(68vh,560px\);max-height:min\(68dvh,560px\)/);
+  assert.match(css,/@media\(max-height:480px\)\{\.wp-dialog\{max-height:calc\(100vh - 32px\);max-height:calc\(100dvh - 32px\)/);
 });
