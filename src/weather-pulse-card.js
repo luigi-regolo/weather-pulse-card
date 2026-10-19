@@ -109,7 +109,26 @@ function wpDayTile(day,unit,zone){
    ${wpIcon(mdi)}<div><strong>${hi===null?'—':wpEscape(wpTemp(hi,unit))}</strong>
    <small>${lo===null?'—':wpEscape(wpTemp(lo,unit))}</small></div></div>`;
 }
-function wpHoursHTML(hours,unit,zone,showChart=true){
+function wpRainData(forecast, unit='') {
+  if(!forecast || typeof forecast!=='object')return {probability:null,amount:null};
+  const chance=wpNumber(forecast.precipitation_probability);
+  const quantity=wpNumber(forecast.precipitation);
+  const precipitationUnit=wpText(unit,12);
+  return {
+    probability:chance!==null&&chance>=0&&chance<=100?wpMetric(chance,'%'):null,
+    amount:quantity!==null&&quantity>=0&&precipitationUnit?wpMetric(quantity,' '+precipitationUnit):null
+  };
+}
+
+function wpRainSummary(data,unit='') {
+  const rain=wpRainData(data,unit);
+  const parts=[];
+  if(rain.probability!==null)parts.push('Probabilità precipitazioni '+rain.probability);
+  if(rain.amount!==null)parts.push('Quantità '+rain.amount);
+  return parts;
+}
+
+function wpHoursHTML(hours,unit,zone,showChart=true,precipitationUnit=''){
   if(!hours.length)return '<div class="wp-empty">Previsioni orarie non disponibili.</div>';
   const valid=hours.map(x=>wpNumber(x.temperature)).filter(v=>v!==null);
   let graph='';
@@ -124,10 +143,11 @@ function wpHoursHTML(hours,unit,zone,showChart=true){
        ${points.filter(Boolean).map(p=>`<circle cx="${p[0].toFixed(2)}" cy="${p[1].toFixed(2)}" r="3" fill="var(--wp-accent)"/>`).join('')}</svg>`;
   }
   return `<div class="wp-hour-scroll"><div class="wp-hour-grid">${hours.map(x=>{
-    const [mdi]=wpCondition(x.condition),temp=wpNumber(x.temperature),rain=wpNumber(x.precipitation_probability);
+    const [mdi]=wpCondition(x.condition),temp=wpNumber(x.temperature),rain=wpRainData(x,precipitationUnit);
     return `<div class="wp-hour"><span>${wpEscape(wpLocalLabel(x.datetime,{hour:'2-digit',minute:'2-digit'},zone))}</span>
        ${wpIcon(mdi)}<strong>${temp===null?'—':wpEscape(wpTemp(temp,unit))}</strong>
-       <small>${rain===null?'—':wpEscape(wpMetric(rain,'%'))}</small></div>`;
+       ${rain.probability===null?'':`<small class="wp-hour-rain" title="Probabilità precipitazioni">${wpEscape(rain.probability)}</small>`}
+       ${rain.amount===null?'':`<small class="wp-hour-rain" title="Quantità precipitazioni">${wpEscape(rain.amount)}</small>`}</div>`;
   }).join('')}</div>${graph}</div>`;
 }
 
@@ -320,18 +340,18 @@ const WP_CSS = `
 .wp-title{font-size:25px;line-height:1.14;font-weight:780;letter-spacing:-.7px;overflow-wrap:anywhere}
 .wp-title b{color:var(--wp-accent);font-weight:800}
 .wp-datetime{text-align:right;color:var(--wp-muted);white-space:nowrap;font-size:11px;line-height:1.5}
-.wp-clock{font-size:21px;font-weight:700;color:var(--wp-fg);font-variant-numeric:tabular-nums}
+.wp-clock{font-size:21px;font-weight:600;color:var(--wp-fg);font-variant-numeric:tabular-nums}
 .wp-panel{background:var(--wp-tile);border:1px solid var(--wp-line);border-radius:24px;padding:13px;min-width:0}
 .wp-current{display:flex;align-items:center;gap:12px}
 .wp-orb{display:grid;place-items:center;flex:none;width:52px;height:52px;border-radius:50%;background:var(--wp-circle)}
 .wp-orb ha-icon{--mdc-icon-size:31px;width:31px;height:31px}
-.wp-main{min-width:0;flex:1}.wp-temp{font-size:29px;font-weight:780;line-height:1.15;letter-spacing:-.7px}
-.wp-condition{font-size:13px;font-weight:600;margin-top:3px;overflow-wrap:anywhere}
+.wp-main{min-width:0;flex:1}.wp-temp{font-size:29px;font-weight:650;line-height:1.15;letter-spacing:-.7px}
+.wp-condition{font-size:14px;font-weight:600;line-height:1.3;margin-top:3px;overflow-wrap:anywhere}
 .wp-sub{font-size:11.5px;line-height:1.4;color:var(--wp-muted);margin-top:3px}
 .wp-location{display:inline-flex;gap:4px;align-items:center;color:var(--wp-muted);font-size:11px;margin-top:7px}
 .wp-location ha-icon{--mdc-icon-size:14px;width:14px;height:14px}
-.wp-detail{display:inline-flex;align-items:center;gap:6px;border:0;border-radius:999px;color:#fff;background:var(--wp-accent);padding:6px 11px;margin-top:12px;font-size:11px;font-weight:650;line-height:1.2;cursor:pointer}
-.wp-detail ha-icon{--mdc-icon-size:14px;width:14px;height:14px;color:#fff}
+.wp-detail{display:inline-flex;align-items:center;justify-content:center;vertical-align:top;gap:5px;border:0;border-radius:999px;color:#fff;background:var(--wp-accent);padding:5px 9px;margin:12px 0 0;font-family:inherit;font-size:11px;font-weight:650;line-height:1.2;cursor:pointer;white-space:nowrap}
+.wp-detail ha-icon{display:block;flex:none;margin:0;--mdc-icon-size:14px;width:14px;height:14px;color:inherit}
 button{font:inherit;cursor:pointer}button:focus-visible{outline:2px solid var(--wp-accent);outline-offset:3px}
 .wp-empty{color:var(--wp-muted);font-size:12px;line-height:1.45}
 .wp-backdrop{position:fixed;inset:0;z-index:9999;background:#0009;display:grid;place-items:center;padding:16px}
@@ -342,35 +362,35 @@ button{font:inherit;cursor:pointer}button:focus-visible{outline:2px solid var(--
 .wp-close ha-icon{display:block;flex:none;margin:0;--mdc-icon-size:18px;width:18px;height:18px}
 .wp-metric{display:flex;justify-content:space-between;align-items:center;gap:12px;background:var(--wp-tile);border:1px solid var(--wp-line);padding:12px 14px;border-radius:14px;margin-top:8px}
 .wp-metric span{color:var(--wp-muted);font-size:12px}
-.wp-metric strong{font-size:13px}
+.wp-metric strong{font-size:13px;font-weight:600}
 
-.wp-forecast-heading{margin:14px 1px 8px;color:var(--wp-muted);font-size:10px;letter-spacing:1px;font-weight:700}
+.wp-forecast-heading{margin:17px 4px 10px;color:var(--wp-muted);font-size:10px;letter-spacing:1.3px;font-weight:600}
 .wp-days{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 .wp-day{display:flex;flex-direction:column;align-items:center;gap:7px;min-width:0;padding:10px 4px;border-radius:16px;border:1px solid var(--wp-line);background:var(--wp-circle);font-size:11px}
 .wp-day>span{color:var(--wp-muted)}.wp-day ha-icon{--mdc-icon-size:24px;width:24px;height:24px}
-.wp-day strong{font-size:12px}.wp-day small{font-size:11px;color:var(--wp-muted);margin-left:5px}
+.wp-day strong{font-size:12px;font-weight:600}.wp-day small{font-size:11px;color:var(--wp-muted);margin-left:5px}
 .wp-forecast-note{color:var(--wp-muted);font-size:11px;line-height:1.45}
-.wp-detail-heading{font-weight:650;font-size:13px;margin:17px 0 10px}
+.wp-detail-heading{font-weight:600;font-size:13px;margin:17px 0 10px}
 .wp-hour-scroll{overflow-x:auto;padding:8px 0 12px}
 .wp-hour-grid{display:grid;grid-template-columns:repeat(8,62px);width:496px}
 .wp-hour{display:flex;flex-direction:column;align-items:center;gap:8px;font-size:11px}
 .wp-hour>span,.wp-hour>small{color:var(--wp-muted);font-size:10px}
-.wp-hour ha-icon{--mdc-icon-size:23px;width:23px;height:23px}.wp-hour strong{font-size:12px}
+.wp-hour ha-icon{--mdc-icon-size:23px;width:23px;height:23px}.wp-hour strong{font-size:12px;font-weight:600}.wp-hour-rain{line-height:1.1;text-align:center;white-space:nowrap}
 .wp-hour-chart{display:block;width:496px;height:70px}
 .wp-daily-detail{background:var(--wp-tile);border-radius:13px;margin-top:7px;padding:11px 13px}
-.wp-daily-detail strong{font-size:12px}.wp-daily-detail .wp-sub{margin-top:5px}
+.wp-daily-detail strong{font-size:12px;font-weight:600}.wp-daily-detail .wp-sub{margin-top:5px}
 
-.wp-sun-heading{color:var(--wp-muted);font-size:10px;font-weight:700;letter-spacing:1px;margin:14px 1px 8px}
+.wp-sun-heading{color:var(--wp-muted);font-size:10px;font-weight:600;letter-spacing:1.3px;margin:17px 4px 10px}
 .wp-sun-cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 .wp-sun-card{display:flex;gap:10px;align-items:center;min-width:0;background:var(--wp-circle);border:1px solid var(--wp-line);padding:9px;border-radius:16px}
 .wp-sun-orb{display:grid;place-items:center;flex:none;width:35px;height:35px;background:var(--wp-tile);border-radius:50%}
 .wp-sun-orb ha-icon{width:20px;height:20px;--mdc-icon-size:20px;color:var(--wp-fg)}
 .wp-sun-card>div{display:flex;flex-direction:column;gap:4px;min-width:0}
 .wp-sun-label{font-size:11px;color:var(--wp-muted)}
-.wp-sun-card strong{font-size:12px;font-weight:650;white-space:nowrap}
+.wp-sun-card strong{font-size:12px;font-weight:600;white-space:nowrap}
 .wp-solar-detail{background:var(--wp-tile);border:1px solid var(--wp-line);border-radius:17px;padding:10px 14px}
 .wp-solar-svg{width:100%;height:122px;display:block}
-.wp-sun-times{display:flex;align-items:center;justify-content:space-between;gap:14px;font-size:12px;font-weight:650}
+.wp-sun-times{display:flex;align-items:center;justify-content:space-between;gap:14px;font-size:12px;font-weight:600}
 .wp-sun-times span{display:flex;align-items:center;gap:5px}
 .wp-sun-times ha-icon{width:16px;height:16px;--mdc-icon-size:16px}
 .wp-solar-duration{text-align:center;margin-top:14px;color:var(--wp-muted);font-size:11px}
@@ -387,7 +407,7 @@ button{font:inherit;cursor:pointer}button:focus-visible{outline:2px solid var(--
 .wp-alert>ha-icon:first-child{flex:none;--mdc-icon-size:23px;width:23px;height:23px;color:currentColor}
 .wp-alert>ha-icon:last-child{flex:none;margin-left:auto;--mdc-icon-size:16px;width:16px;height:16px;color:currentColor}
 .wp-alert>span{min-width:0;display:flex;flex-direction:column;gap:4px}
-.wp-alert strong{font-size:12px;font-weight:750;line-height:1.3}
+.wp-alert strong{font-size:12px;font-weight:600;line-height:1.3}
 .wp-alert small{font-size:11px;line-height:1.35;overflow-wrap:anywhere}
 .wp-alert-note{background:var(--wp-tile);border-radius:14px;padding:11px 13px;font-size:12px;color:var(--wp-muted);line-height:1.5}
 .wp-alert-detail{font-size:12px;line-height:1.5}
@@ -403,7 +423,7 @@ button{font:inherit;cursor:pointer}button:focus-visible{outline:2px solid var(--
 .wp-moon{display:flex;align-items:center;gap:12px;border:1px solid var(--wp-line);background:var(--wp-tile);padding:12px 14px;border-radius:16px;margin-top:9px}
 .wp-moon-icon{display:grid;place-items:center;width:40px;height:40px;border-radius:50%;background:var(--wp-circle);flex:none}
 .wp-moon-icon ha-icon{--mdc-icon-size:24px;width:24px;height:24px}
-.wp-moon strong{font-size:12px}.wp-moon-label{color:var(--wp-muted);font-size:11px;margin-top:4px}
+.wp-moon strong{font-size:12px;font-weight:600}.wp-moon-label{color:var(--wp-muted);font-size:11px;margin-top:4px}
 @media(max-width:420px){.wp-shell{padding:13px;border-radius:23px}.wp-title{font-size:23px}.wp-head{gap:7px}.wp-datetime{font-size:10px}.wp-clock{font-size:19px}.wp-orb{width:43px;height:43px}.wp-temp{font-size:25px}.wp-panel{padding:10px}}
 @media(prefers-reduced-motion:reduce){.wp-detail{transition:none}}
 `;
@@ -505,20 +525,21 @@ class WeatherPulseCard extends HTMLElement {
   _popup(entity){
     const a=wpKnown(entity)?entity.attributes||{}:{};
     const unit=wpText(a.temperature_unit||this._hass?.config?.unit_system?.temperature||'°C',8);
+    const precipitationUnit=wpText(a.precipitation_unit||this._hass?.config?.unit_system?.accumulated_precipitation||this._hass?.config?.unit_system?.precipitation||'',12);
     const zone=this._zone(),hours=wpNextHours(this._forecast.hourly),days=wpNextDays(this._forecast.daily,new Date(),zone);
     const sun=wpSolarDay(new Date(),zone,this._hass?.config?.latitude,this._hass?.config?.longitude,this._hass?.states?.['sun.sun']);
     const alert=this._alert();
     const metrics=[['Temperatura',wpTemp(a.temperature,unit)],
       ['Umidità',wpMetric(a.humidity,'%')],['Vento',wpMetric(a.wind_speed,a.wind_speed_unit?' '+wpText(a.wind_speed_unit,14):'')],
       ['Pressione',wpMetric(a.pressure,a.pressure_unit?' '+wpText(a.pressure_unit,14):'')]];
-    const hourly=this._forecastState.hourly==='ready'?wpHoursHTML(hours,unit,zone,this._config.show_hourly_chart):
+    const hourly=this._forecastState.hourly==='ready'?wpHoursHTML(hours,unit,zone,this._config.show_hourly_chart,precipitationUnit):
       '<div class="wp-empty">'+(this._forecastState.hourly==='loading'?'Caricamento previsioni…':'Previsioni orarie non disponibili.')+'</div>';
     const daily=this._forecastState.daily==='ready'&&days.length?days.map(d=>{
-      const [,condition]=wpCondition(d.condition),chance=wpNumber(d.precipitation_probability);
+      const [,condition]=wpCondition(d.condition),rain=wpRainSummary(d,precipitationUnit);
       return `<div class="wp-daily-detail"><strong>${wpEscape(wpLocalLabel(d.datetime,{weekday:'long',day:'numeric',month:'long'},zone))} · ${wpEscape(condition)}</strong>
         <div class="wp-sub">Max ${wpNumber(d.temperature)===null?'—':wpEscape(wpTemp(d.temperature,unit))} ·
         Min ${wpNumber(d.templow)===null?'—':wpEscape(wpTemp(d.templow,unit))} ·
-        Pioggia ${chance===null?'non disponibile':wpEscape(wpMetric(chance,'%'))}</div></div>`;
+        ${rain.length?' · '+rain.map(wpEscape).join(' · '):''}</div></div>`;
     }).join(''):'<div class="wp-empty">Previsioni giornaliere non disponibili.</div>';
     return `<div class="wp-backdrop" data-backdrop="1"><div class="wp-dialog" role="dialog" aria-modal="true" aria-label="Dettagli meteo">
       <div class="wp-dialog-head"><strong>Dettagli meteo</strong><button type="button" class="wp-close" data-close="1" aria-label="Chiudi">${wpIcon('close')}</button></div>
