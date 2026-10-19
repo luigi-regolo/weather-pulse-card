@@ -198,3 +198,22 @@ test('current conditions show cloud only when present',()=>{
   assert.match(card._popup({state:'cloudy',attributes:{cloud_coverage:85}}),/>Copertura nuvolosa<\/span><strong>85%<\/strong>/);
   assert.doesNotMatch(card._popup({state:'cloudy',attributes:{}}),/>Copertura nuvolosa<\/span>/);
 });
+
+test('weather card fits the dashboard column and adapts narrow cards',()=>{
+  const css=get('WP_CSS');
+  assert.match(css,/:host\{[^}]*width:100%;max-width:100%;min-width:0;container-type:inline-size/);
+  assert.match(css,/\.wp-shell\{[^}]*width:100%;max-width:100%;min-width:0/);
+  assert.match(css,/@container \(max-width:380px\)/);
+  assert.match(css,/@container \(max-width:310px\)/);
+  assert.match(css,/@container \(max-width:310px\)\{[^}]*\.wp-shell\{[^}]*padding:10px/);
+});
+test('popup has compact viewport boundaries and a scrollable interior',()=>{
+  const css=get('WP_CSS');
+  assert.match(css,/\.wp-dialog\{[^}]*width:min\(350px,100%\)/);
+  assert.match(css,/\.wp-dialog\{[^}]*max-height:min\(68dvh,560px\)/);
+  assert.match(css,/\.wp-dialog\{[^}]*overflow-y:auto;overflow-x:hidden/);
+  assert.doesNotMatch(css,/\.wp-dialog\{[^}]*max-height:90vh/);
+  assert.match(css,/\.wp-backdrop\{[^}]*safe-area-inset-top/);
+  assert.match(css,/\.wp-dialog-head\{[^}]*position:sticky;top:0/);
+  assert.match(css,/\.wp-hour-scroll\{[^}]*overflow-x:auto;max-width:100%/);
+});
