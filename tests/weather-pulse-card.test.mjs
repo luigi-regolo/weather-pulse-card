@@ -201,7 +201,9 @@ test('current conditions show cloud only when present',()=>{
 
 test('weather card fits the dashboard column and adapts narrow cards',()=>{
   const css=get('WP_CSS');
-  assert.match(css,/:host\{[^}]*width:100%;max-width:100%;min-width:0;container-type:inline-size/);
+  assert.match(css,/:host\{[^}]*width:100%;max-width:100%;min-width:0/);
+  assert.match(css,/\.wp-container\{[^}]*container-type:inline-size/);
+  assert.doesNotMatch(css,/:host\{[^}]*container-type:inline-size/);
   assert.match(css,/\.wp-shell\{[^}]*width:100%;max-width:100%;min-width:0/);
   assert.match(css,/@container \(max-width:380px\)/);
   assert.match(css,/@container \(max-width:310px\)/);
@@ -216,4 +218,24 @@ test('popup has compact viewport boundaries and a scrollable interior',()=>{
   assert.match(css,/\.wp-backdrop\{[^}]*safe-area-inset-top/);
   assert.match(css,/\.wp-dialog-head\{[^}]*position:sticky;top:0/);
   assert.match(css,/\.wp-hour-scroll\{[^}]*overflow-x:auto;max-width:100%/);
+});
+
+test('popup remains viewport-positioned outside its responsive layout container',()=>{
+  const css=get('WP_CSS');
+  assert.match(css,/\.wp-container\{[^}]*container-type:inline-size/);
+  assert.doesNotMatch(css,/:host\{[^}]*container-type:inline-size/);
+  assert.match(css,/\.wp-backdrop\{--wp-accent:#0a7156;/);
+  assert.match(css,/\.wp-shell\.wp-dark,\.wp-backdrop\.wp-dark\{--wp-accent:/);
+  const card=Object.create(get('WeatherPulseCard.prototype'));
+  card.isConnected=true;
+  card._config=get('wpConfig({weather_entity:"weather.meteo"})');
+  card._hass={themes:{darkMode:false},config:{latitude:45.4,longitude:9.1,time_zone:'Europe/Rome'},states:{'weather.meteo':{state:'cloudy',attributes:{temperature:17}}}};
+  card._forecast={daily:[],hourly:[]};card._forecastState={daily:'idle',hourly:'idle'};
+  card._open=true;card._lastSignature='';
+  card.shadowRoot={innerHTML:''};
+  card._paint();
+  const markup=card.shadowRoot.innerHTML;
+  assert.match(markup,/<div class="wp-container"><div class="wp-shell wp-light">/);
+  assert.match(markup,/<\/button>\s*<\/div><\/div>\s*<div class="wp-backdrop wp-light"/);
+  assert.match(markup,/class="wp-dialog"/);
 });
