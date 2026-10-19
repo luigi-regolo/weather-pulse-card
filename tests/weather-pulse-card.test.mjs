@@ -115,3 +115,40 @@ test('weather entity selection keeps type and defers editor repaint',async()=>{
   await Promise.resolve();
   assert.equal(renders,1);
 });
+
+test('Edera headings retain shared hierarchy with lighter weather labels',()=>{
+  const css=get('WP_CSS');
+  assert.match(css,/\.wp-title\{font-size:25px;line-height:1\.14;font-weight:780/);
+  assert.match(css,/\.wp-temp\{font-size:29px;font-weight:650/);
+  assert.match(css,/\.wp-condition\{font-size:14px;font-weight:600/);
+  assert.match(css,/\.wp-forecast-heading\{margin:17px 4px 10px;[^}]*font-weight:600/);
+  assert.match(css,/\.wp-sun-heading\{[^}]*font-weight:600/);
+});
+test('details pill aligns icon and label like Edera badges',()=>{
+  const css=get('WP_CSS');
+  assert.match(css,/\.wp-detail\{display:inline-flex;align-items:center;justify-content:center;vertical-align:top/);
+  assert.match(css,/\.wp-detail ha-icon\{display:block;flex:none;margin:0;/);
+});
+test('precipitation probability and quantity remain distinct',()=>{
+  assert.equal(get('wpRainData({precipitation_probability:70,precipitation:4.2},"mm").probability'),'70%');
+  assert.equal(get('wpRainData({precipitation_probability:70,precipitation:4.2},"mm").amount'),'4,2 mm');
+  assert.equal(get('wpRainSummary({precipitation:2},"mm")[0]'),'Quantità 2 mm');
+  assert.equal(get('wpRainSummary({precipitation_probability:45},"mm")[0]'),'Probabilità precipitazioni 45%');
+});
+test('zero precipitation is valid and missing fields are omitted',()=>{
+  assert.equal(get('wpRainData({precipitation_probability:0,precipitation:0},"mm").probability'),'0%');
+  assert.equal(get('wpRainData({precipitation_probability:0,precipitation:0},"mm").amount'),'0 mm');
+  assert.equal(get('wpRainSummary({}, "mm").length'),0);
+  assert.equal(get('wpRainData({precipitation:2},"").amount'),null);
+  assert.equal(get('wpRainData({precipitation_probability:110},"mm").probability'),null);
+  assert.equal(get('wpRainData({precipitation:-1},"mm").amount'),null);
+});
+test('hourly forecast hides rain fields when unavailable and shows both when present',()=>{
+  const rows=get('wpNextHours([{datetime:"2099-10-19T12:00:00Z",temperature:18,condition:"cloudy",precipitation_probability:70,precipitation:4.2}],new Date("2099-10-19T11:00:00Z"))');
+  const html=get('wpHoursHTML') (rows, '°C','Europe/Rome',false,'mm');
+  assert.match(html,/70%/);
+  assert.match(html,/4,2 mm/);
+  const missing=get('wpHoursHTML') ([{datetime:"2099-10-19T12:00:00Z",temperature:18}], '°C','Europe/Rome',false,'mm');
+  assert.doesNotMatch(missing,/wp-hour-rain/);
+  assert.doesNotMatch(missing,/Pioggia non disponibile/);
+});
