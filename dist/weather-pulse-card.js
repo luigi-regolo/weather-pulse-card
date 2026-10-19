@@ -7,12 +7,16 @@ const WP_TAG = 'weather-pulse-card';
 const WP_EDITOR_TAG = 'weather-pulse-card-editor';
 const WP_DEFAULTS = Object.freeze({
   title: 'Meteo', eyebrow: 'WEATHER PULSE CARD', theme_mode: 'auto',
-  weather_entity: '', alert_entity: '', show_location: false, location_label: ''
+  weather_entity: '', alert_entity: '', moon_entity: '', show_hourly_chart: true, show_location: false, location_label: ''
 });
 function wpText(value, limit = 90) { return String(value ?? '').trim().slice(0, limit); }
 function wpEscape(value) {
   return String(value ?? '').replace(/[&<>"']/g, c =>
     ({'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'}[c]));
+}
+function wpMoonEntity(value) {
+  const id=wpText(value,160);
+  return /^sensor\.[a-z0-9_]+$/.test(id)?id:'';
 }
 function wpAlertEntity(value) {
   const id=wpText(value,160);
@@ -30,6 +34,8 @@ function wpConfig(raw = {}) {
     theme_mode: ['auto', 'light', 'dark'].includes(r.theme_mode) ? r.theme_mode : 'auto',
     weather_entity: wpEntity(r.weather_entity),
     alert_entity: wpAlertEntity(r.alert_entity),
+    moon_entity: wpMoonEntity(r.moon_entity),
+    show_hourly_chart: r.show_hourly_chart !== false,
     show_location: r.show_location === true,
     location_label: wpText(r.location_label, 70)
   };
@@ -99,11 +105,11 @@ function wpDayTile(day,unit,zone){
    ${wpIcon(mdi)}<div><strong>${hi===null?'—':wpEscape(wpTemp(hi,unit))}</strong>
    <small>${lo===null?'—':wpEscape(wpTemp(lo,unit))}</small></div></div>`;
 }
-function wpHoursHTML(hours,unit,zone){
+function wpHoursHTML(hours,unit,zone,showChart=true){
   if(!hours.length)return '<div class="wp-empty">Previsioni orarie non disponibili.</div>';
   const valid=hours.map(x=>wpNumber(x.temperature)).filter(v=>v!==null);
   let graph='';
-  if(valid.length>=2){
+  if(showChart&&valid.length>=2){
     const min=Math.min(...valid),range=Math.max(1,Math.max(...valid)-min);
     const points=hours.map((x,i)=>{const t=wpNumber(x.temperature);return t===null?null:[31+i*62,56-35*(t-min)/range]});
     const segments=[];let current=[];
@@ -288,6 +294,18 @@ function wpAlertDetails(alert,zone) {
     <div class="wp-alert-disclaimer">Per informazioni operative e aggiornamenti consultare gli avvisi delle autorità competenti.</div></div>`;
 }
 
+const WP_MOON_PHASES = Object.freeze({"new_moon":["moon-new","Luna nuova"],"waxing_crescent":["moon-waxing-crescent","Luna crescente"],"first_quarter":["moon-first-quarter","Primo quarto"],"waxing_gibbous":["moon-waxing-gibbous","Gibbosa crescente"],"full_moon":["moon-full","Luna piena"],"waning_gibbous":["moon-waning-gibbous","Gibbosa calante"],"last_quarter":["moon-last-quarter","Ultimo quarto"],"waning_crescent":["moon-waning-crescent","Luna calante"]});
+function wpMoonData(entity) {
+  const phase=wpKnown(entity)?wpText(entity.state,45).toLowerCase().replace(/[\s-]+/g,'_'):'';
+  const found=Object.prototype.hasOwnProperty.call(WP_MOON_PHASES,phase)?WP_MOON_PHASES[phase]:null;
+  return found?{icon:found[0],label:found[1],known:true}:{icon:'weather-night',label:'Fase lunare non disponibile',known:false};
+}
+function wpMoonDetails(entity) {
+  const data=wpMoonData(entity);
+  return `<div class="wp-moon"><span class="wp-moon-icon">${wpIcon(data.icon)}</span>
+    <div><strong>Fase lunare</strong><div class="wp-moon-label">${wpEscape(data.label)}</div></div></div>`;
+}
+
 const WP_CSS = `
 :host{display:block;box-sizing:border-box;font-family:var(--ha-font-family-body,Roboto,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif);color:var(--wp-fg);font-size:14px}
 *,*:before,*:after{box-sizing:border-box}
@@ -377,6 +395,11 @@ button{font:inherit;cursor:pointer}button:focus-visible{outline:2px solid var(--
 .wp-editor-alert{margin:21px 0 12px;padding-top:14px;border-top:1px solid var(--divider-color)}
 .wp-editor-alert strong{font-size:13px}
 .wp-clear-alert{margin-top:8px;background:var(--secondary-background-color);border:1px solid var(--divider-color);border-radius:10px;padding:8px 12px;color:var(--primary-text-color);font:inherit;cursor:pointer}
+
+.wp-moon{display:flex;align-items:center;gap:12px;border:1px solid var(--wp-line);background:var(--wp-tile);padding:12px 14px;border-radius:16px;margin-top:9px}
+.wp-moon-icon{display:grid;place-items:center;width:40px;height:40px;border-radius:50%;background:var(--wp-circle);flex:none}
+.wp-moon-icon ha-icon{--mdc-icon-size:24px;width:24px;height:24px}
+.wp-moon strong{font-size:12px}.wp-moon-label{color:var(--wp-muted);font-size:11px;margin-top:4px}
 @media(max-width:420px){.wp-shell{padding:13px;border-radius:23px}.wp-title{font-size:23px}.wp-head{gap:7px}.wp-datetime{font-size:10px}.wp-clock{font-size:19px}.wp-orb{width:43px;height:43px}.wp-temp{font-size:25px}.wp-panel{padding:10px}}
 @media(prefers-reduced-motion:reduce){.wp-detail{transition:none}}
 `;
@@ -484,7 +507,7 @@ class WeatherPulseCard extends HTMLElement {
     const metrics=[['Temperatura',wpTemp(a.temperature,unit)],['Temperatura percepita',wpTemp(a.apparent_temperature,unit)],
       ['Umidità',wpMetric(a.humidity,'%')],['Vento',wpMetric(a.wind_speed,a.wind_speed_unit?' '+wpText(a.wind_speed_unit,14):'')],
       ['Pressione',wpMetric(a.pressure,a.pressure_unit?' '+wpText(a.pressure_unit,14):'')]];
-    const hourly=this._forecastState.hourly==='ready'?wpHoursHTML(hours,unit,zone):
+    const hourly=this._forecastState.hourly==='ready'?wpHoursHTML(hours,unit,zone,this._config.show_hourly_chart):
       '<div class="wp-empty">'+(this._forecastState.hourly==='loading'?'Caricamento previsioni…':'Previsioni orarie non disponibili.')+'</div>';
     const daily=this._forecastState.daily==='ready'&&days.length?days.map(d=>{
       const [,condition]=wpCondition(d.condition),chance=wpNumber(d.precipitation_probability);
@@ -497,7 +520,8 @@ class WeatherPulseCard extends HTMLElement {
       <div class="wp-dialog-head"><strong>Dettagli meteo</strong><button type="button" class="wp-close" data-close="1" aria-label="Chiudi">${wpIcon('close')}</button></div>
       <div class="wp-detail-heading">Prossime 8 ore</div>${hourly}
       <div class="wp-detail-heading">Prossimi 3 giorni</div>${daily}
-      <div class="wp-detail-heading">Sole</div>${wpSolarArc(sun,zone)}
+      <div class="wp-detail-heading">${this._config.moon_entity?"Sole e luna":"Sole"}</div>${wpSolarArc(sun,zone)}
+      ${this._config.moon_entity?wpMoonDetails(this._hass?.states?.[this._config.moon_entity]):""}
       ${this._config.alert_entity?`<div class="wp-detail-heading">Allerte meteorologiche</div>${wpAlertDetails(alert,zone)}`:""}
       <div class="wp-detail-heading">Condizioni attuali</div>
       ${metrics.map(([label,value])=>`<div class="wp-metric"><span>${wpEscape(label)}</span><strong>${wpEscape(value)}</strong></div>`).join('')}
@@ -509,7 +533,7 @@ class WeatherPulseCard extends HTMLElement {
     const entity = this._weather();
     const attrs = wpKnown(entity) ? entity.attributes || {} : {};
     const now = new Date();
-    const signature = JSON.stringify([this._config,this._hass?.themes?.darkMode,this._isDark(),entity?.state,attrs,Math.floor(now.getTime()/60000),this._open,this._forecast,this._forecastState,this._hass?.config?.time_zone,this._hass?.config?.latitude,this._hass?.config?.longitude,this._hass?.states?.['sun.sun']?.state,this._hass?.states?.['sun.sun']?.attributes,this._config.alert_entity?this._hass?.states?.[this._config.alert_entity]:null]);
+    const signature = JSON.stringify([this._config,this._hass?.themes?.darkMode,this._isDark(),entity?.state,attrs,Math.floor(now.getTime()/60000),this._open,this._forecast,this._forecastState,this._hass?.config?.time_zone,this._hass?.config?.latitude,this._hass?.config?.longitude,this._hass?.states?.['sun.sun']?.state,this._hass?.states?.['sun.sun']?.attributes,this._config.alert_entity?this._hass?.states?.[this._config.alert_entity]:null,this._config.moon_entity?this._hass?.states?.[this._config.moon_entity]:null]);
     if (signature === this._lastSignature) return;
     this._lastSignature = signature;
     const known = wpKnown(entity);
@@ -549,89 +573,184 @@ class WeatherPulseCard extends HTMLElement {
   }
 }
 const WP_EDITOR_CSS = `
-:host{display:block;font-family:var(--ha-font-family-body,Roboto,Arial,sans-serif);color:var(--primary-text-color);font-size:14px}
+:host{display:block;font-family:var(--ha-font-family-body,Roboto,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif);font-size:13px;color:var(--primary-text-color)}
 *,*:before,*:after{box-sizing:border-box}
-.wp-editor{padding:2px}.wp-field{margin:15px 0}.wp-label{display:block;font-size:13px;font-weight:600;margin-bottom:8px}
-.wp-input{width:100%;font:inherit;color:var(--primary-text-color);background:var(--secondary-background-color);border:1px solid var(--divider-color);border-radius:10px;padding:10px}
-.wp-sub{font-size:12px;color:var(--secondary-text-color);margin-top:6px;line-height:1.4}
-.wp-row{display:flex;align-items:center;gap:12px}.wp-row label{flex:1}.wp-selector{display:block;width:100%}
-.wp-editor ha-selector{display:block;--mdc-theme-primary:var(--primary-color)}
-.wp-editor .wp-fallback{display:none}.wp-editor.wp-no-native .wp-fallback{display:block}.wp-editor.wp-no-native .wp-native{display:none}
-.wp-input:focus-visible{outline:2px solid var(--primary-color);outline-offset:2px}
+.wp-editor{padding:2px 0 8px}
+.wp-tabs{display:flex;flex-wrap:wrap;gap:5px;padding:0 0 12px;border-bottom:1px solid var(--divider-color);margin-bottom:12px}
+.wp-tab{border:1px solid transparent;border-radius:999px;padding:7px 10px;background:var(--secondary-background-color);color:var(--secondary-text-color);font:inherit;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap}
+.wp-tab.active{background:var(--primary-color,#0a7156);color:white;border-color:var(--primary-color,#0a7156)}
+.wp-heading{font-size:14px;font-weight:700;margin:17px 1px 6px}
+.wp-hint{font-size:12px;line-height:1.5;color:var(--secondary-text-color);margin:4px 1px 14px}
+.wp-field{margin:15px 0}.wp-label{display:block;font-size:12px;font-weight:650;margin:0 0 8px}
+.wp-input{display:block;width:100%;border:1px solid var(--divider-color);border-radius:12px;padding:11px;background:var(--secondary-background-color);color:var(--primary-text-color);font:inherit;font-size:13px}
+.wp-row{display:flex;justify-content:space-between;align-items:center;gap:10px;border:1px solid var(--divider-color);background:var(--secondary-background-color);border-radius:13px;padding:12px;margin-top:10px}
+.wp-row label{flex:1;font-size:12px}.wp-row input{width:17px;height:17px}
+.wp-selector{display:block;min-width:0}
+.wp-editor ha-selector{display:block;--mdc-theme-primary:var(--primary-color,#0a7156)}
+.wp-clear-alert{background:var(--secondary-background-color);color:var(--primary-text-color);border:1px solid var(--divider-color);border-radius:12px;padding:9px 12px;font:inherit;font-size:12px;margin-top:8px;cursor:pointer}
+.wp-input:focus-visible,.wp-tab:focus-visible,.wp-clear-alert:focus-visible{outline:2px solid var(--primary-color,#0a7156);outline-offset:2px}
+.wp-fallback{display:none}.wp-no-native .wp-fallback{display:block}.wp-no-native .wp-native{display:none}
 `;
 class WeatherPulseCardEditor extends HTMLElement {
   constructor() {
-    super(); this.attachShadow({mode:'open'}); this._config=wpConfig(); this._hass=null;
-    this.shadowRoot.addEventListener('change', e => this._change(e));
-    this.shadowRoot.addEventListener('click',e=>{if(e.target.closest('[data-clear-alert]'))this._update('alert_entity','');});
+    super();
+    this.attachShadow({mode:'open'});
+    this._config=wpConfig();
+    this._hass=null;
+    this._tab='meteo';
+    this.shadowRoot.addEventListener('change',event=>this._change(event));
+    this.shadowRoot.addEventListener('click',event=>this._click(event));
   }
-  setConfig(config) { this._config=wpConfig(config); this._render(); }
-  set hass(hass) { this._hass=hass; this._render(); }
-  _update(key,value) {
-    this._config=wpConfig({...this._config,[key]:value});
-    this.dispatchEvent(new CustomEvent('config-changed',{detail:{config:this._config},bubbles:true,composed:true}));
+  setConfig(config) {
+    this._config=wpConfig(config);
     this._render();
   }
+  set hass(hass) {
+    this._hass=hass;
+    this._render();
+  }
+  _update(key,value) {
+    this._config=wpConfig({...this._config,[key]:value});
+    this.dispatchEvent(new CustomEvent('config-changed',{
+      detail:{config:this._config},bubbles:true,composed:true
+    }));
+    this._render();
+  }
+  _click(event) {
+    const tab=event.target?.closest?.('[data-tab]');
+    if(tab){
+      this._tab=tab.dataset.tab;
+      this._render();
+      return;
+    }
+    if(event.target?.closest?.('[data-clear-alert]'))this._update('alert_entity','');
+    if(event.target?.closest?.('[data-clear-moon]'))this._update('moon_entity','');
+  }
   _change(event) {
-    const el = event.target;
-    if (el.dataset.field==='weather_entity') this._update('weather_entity',wpEntity(el.value));
-    if (el.dataset.field==='alert_entity') this._update('alert_entity',wpAlertEntity(el.value));
-    if (el.dataset.field==='title') this._update('title',el.value);
-    if (el.dataset.field==='theme_mode') this._update('theme_mode',el.value);
-    if (el.dataset.field==='show_location') this._update('show_location',el.checked);
-    if (el.dataset.field==='location_label') this._update('location_label',el.value);
+    const input=event.target;
+    const key=input?.dataset?.field;
+    if(!key)return;
+    const validators={
+      weather_entity:wpEntity,
+      moon_entity:wpMoonEntity,
+      alert_entity:wpAlertEntity
+    };
+    if(Object.prototype.hasOwnProperty.call(validators,key)){
+      this._update(key,validators[key](input.value));
+      return;
+    }
+    if(['show_location','show_hourly_chart'].includes(key)){
+      this._update(key,!!input.checked);
+      return;
+    }
+    if(['title','eyebrow','location_label','theme_mode'].includes(key)){
+      this._update(key,input.value);
+    }
+  }
+  _options(domain,selected) {
+    const values=Object.keys(this._hass?.states||{}).filter(id=>{
+      if(domain==='weather')return id.startsWith('weather.');
+      if(domain==='moon')return id.startsWith('sensor.');
+      return /^(sensor|binary_sensor)\./.test(id);
+    }).sort();
+    return '<option value="">Nessuna entità selezionata</option>'+
+      values.map(id=>`<option value="${wpEscape(id)}" ${selected===id?'selected':''}>${wpEscape(id)}</option>`).join('');
+  }
+  _entityField(key,label,domain,clear) {
+    const value=this._config[key]||'';
+    const note=clear&&value?`<button type="button" class="wp-clear-alert" data-clear-${domain}="1">Rimuovi entità</button>`:'';
+    return `<div class="wp-field">
+      <label class="wp-label">${wpEscape(label)}</label>
+      <div class="wp-native wp-selector" data-selector="${domain}"></div>
+      <select class="wp-input wp-fallback" data-field="${key}" aria-label="${wpEscape(label)}">
+        ${this._options(domain,value)}</select>${note}</div>`;
+  }
+  _check(key,label,help='') {
+    return `<div class="wp-row"><label for="wp-${key}">${wpEscape(label)}
+      ${help?`<div class="wp-hint" style="margin:4px 0 0">${wpEscape(help)}</div>`:''}</label>
+      <input id="wp-${key}" type="checkbox" data-field="${key}" ${this._config[key]?'checked':''}></div>`;
+  }
+  _text(key,label,limit=60) {
+    return `<div class="wp-field"><label class="wp-label" for="wp-${key}">${wpEscape(label)}</label>
+      <input class="wp-input" id="wp-${key}" data-field="${key}" value="${wpEscape(this._config[key])}" maxlength="${limit}"></div>`;
+  }
+  _content() {
+    const c=this._config;
+    if(this._tab==='meteo') {
+      return `<div class="wp-heading">Previsioni meteorologiche</div>
+        <p class="wp-hint">Seleziona un'entità meteo configurata in Home Assistant. La disponibilità delle previsioni orarie e giornaliere dipende dall'integrazione selezionata.</p>
+        ${this._entityField('weather_entity','Entità meteo','weather',false)}`;
+    }
+    if(this._tab==='sole'){
+      return `<div class="wp-heading">Sole e luna</div>
+        <p class="wp-hint">Alba, tramonto e durata del giorno utilizzano la posizione e il fuso orario configurati in Home Assistant. Non è necessario selezionare un'entità per il sole.</p>
+        ${this._entityField('moon_entity','Entità fase lunare (facoltativa)','moon',true)}
+        <p class="wp-hint">Per mostrare la fase lunare nel popup seleziona un sensore che espone una fase supportata, come quello dell'integrazione Moon di Home Assistant.</p>`;
+    }
+    if(this._tab==='allerte'){
+      return `<div class="wp-heading">Allerte meteorologiche</div>
+        <p class="wp-hint">Funzione facoltativa. Seleziona soltanto un sensore che rappresenta realmente le allerte meteo. Le informazioni dipendono dalla sorgente configurata.</p>
+        ${this._entityField('alert_entity','Entità allerta (facoltativa)','alert',true)}
+        <p class="wp-hint">Quando lo stato della sorgente è sconosciuto, la card non dichiara che le allerte siano assenti. Per le decisioni di sicurezza consulta sempre le autorità competenti.</p>`;
+    }
+    if(this._tab==='aspetto'){
+      return `<div class="wp-heading">Aspetto Edera</div>
+        <p class="wp-hint">Colori e dimensioni coerenti con la dashboard Edera. Il punto verde finale viene aggiunto automaticamente al titolo.</p>
+        ${this._text('title','Titolo',60)}
+        ${this._text('eyebrow','Intestazione superiore',60)}
+        <div class="wp-field"><label class="wp-label" for="wp-theme">Tema</label>
+          <select class="wp-input" id="wp-theme" data-field="theme_mode">
+          ${[['auto','Automatico (Home Assistant)'],['light','Light Edera'],['dark','Dark Edera']]
+            .map(([value,label])=>`<option value="${value}" ${c.theme_mode===value?'selected':''}>${label}</option>`).join('')}
+          </select></div>
+        ${this._check('show_location','Mostra località (facoltativo)')}
+        ${c.show_location?this._text('location_label','Nome località',70):''}`;
+    }
+    if(this._tab==='avanzate'){
+      return `<div class="wp-heading">Impostazioni avanzate</div>
+        <p class="wp-hint">La card utilizza i dati delle integrazioni già disponibili in Home Assistant. Non richiede una chiave API dedicata.</p>
+        ${this._check('show_hourly_chart','Mostra il grafico delle temperature orarie',
+          'Le previsioni orarie rimangono visibili anche quando il grafico è disattivato.')}
+        <p class="wp-hint">I dati non disponibili vengono indicati come tali. Nessun dato della dashboard è inviato dalla card a servizi esterni.</p>`;
+    }
+    return '';
+  }
+  _selector(target,domain) {
+    const selectors={weather:{entity:{domain:'weather'}},moon:{entity:{domain:'sensor'}},alert:{entity:{domain:['sensor','binary_sensor']}}};
+    const key={weather:'weather_entity',moon:'moon_entity',alert:'alert_entity'}[domain];
+    const validators={weather:wpEntity,moon:wpMoonEntity,alert:wpAlertEntity};
+    const node=document.createElement('ha-selector');
+    node.hass=this._hass;
+    node.selector=selectors[domain];
+    node.value=this._config[key]||'';
+    node.setAttribute('aria-label',{weather:'Entità meteo',moon:'Entità fase lunare',alert:'Entità allerta'}[domain]);
+    node.addEventListener('value-changed',event=>{
+      event.stopPropagation();
+      if(event.detail && Object.prototype.hasOwnProperty.call(event.detail,'value')){
+        this._update(key,validators[domain](event.detail.value));
+      }
+    });
+    target.appendChild(node);
   }
   _render() {
-    if (!this.isConnected) return;
-    const c = this._config;
-    const opts = Object.keys(this._hass?.states || {}).filter(id=>id.startsWith('weather.')).sort();
-    const alertOpts=Object.keys(this._hass?.states||{}).filter(id=>wpAlertEntity(id)).sort();
-    this.shadowRoot.innerHTML = `<style>${WP_EDITOR_CSS}</style><div class="wp-editor">
-      <div class="wp-field"><label class="wp-label">Entità meteo</label><div class="wp-native wp-selector" data-selector="1"></div>
-      <select class="wp-input wp-fallback" data-field="weather_entity" aria-label="Entità meteo"><option value="">Seleziona entità</option>
-      ${opts.map(id => `<option value="${wpEscape(id)}" ${c.weather_entity===id?'selected':''}>${wpEscape(id)}</option>`).join('')}</select>
-      <div class="wp-sub">Seleziona una delle entità weather.* già disponibili in Home Assistant.</div></div>
-      <div class="wp-editor-alert"><strong>Allerte meteorologiche</strong>
-      <div class="wp-sub">Opzionale. Seleziona un sensore che segnala esplicitamente allerte meteo: lo stato dipende dall'integrazione scelta.</div></div>
-      <div class="wp-field"><label class="wp-label">Entità allerta (facoltativa)</label>
-        <div class="wp-native wp-selector" data-alert-selector="1"></div>
-        <select class="wp-input wp-fallback" data-field="alert_entity" aria-label="Entità allerta">
-          <option value="">Nessuna</option>
-          ${alertOpts.map(id=>`<option value="${wpEscape(id)}" ${c.alert_entity===id?'selected':''}>${wpEscape(id)}</option>`).join('')}
-        </select>
-        ${c.alert_entity?'<button type="button" class="wp-clear-alert" data-clear-alert="1">Rimuovi entità allerta</button>':''}
-      </div>
-      <div class="wp-field"><label class="wp-label" for="wp-title">Titolo</label><input class="wp-input" id="wp-title" data-field="title" value="${wpEscape(c.title)}" maxlength="60"></div>
-      <div class="wp-field"><label class="wp-label" for="wp-theme">Tema</label><select class="wp-input" id="wp-theme" data-field="theme_mode">
-      ${[['auto','Automatico'],['light','Light Edera'],['dark','Dark Edera']].map(([v,l])=>`<option value="${v}" ${c.theme_mode===v?'selected':''}>${l}</option>`).join('')}</select></div>
-      <div class="wp-field wp-row"><label for="wp-location">Mostra località</label><input type="checkbox" id="wp-location" data-field="show_location" ${c.show_location?'checked':''}></div>
-      ${c.show_location?`<div class="wp-field"><label class="wp-label" for="wp-location-label">Nome località</label><input class="wp-input" id="wp-location-label" data-field="location_label" maxlength="70" value="${wpEscape(c.location_label)}"></div>`:''}
-    </div>`;
-    const wrapper = this.shadowRoot.querySelector('.wp-editor');
-    if (!customElements.get('ha-selector')) { wrapper.classList.add('wp-no-native'); return; }
-    const selector = document.createElement('ha-selector');
-    selector.hass = this._hass;
-    selector.selector = {entity:{domain:'weather'}};
-    selector.value = c.weather_entity || '';
-    selector.setAttribute('aria-label','Entità meteo');
-    selector.addEventListener('value-changed',e=>{
-      e.stopPropagation();
-      if(e.detail && Object.prototype.hasOwnProperty.call(e.detail,'value')) this._update('weather_entity',wpEntity(e.detail.value));
+    if(!this.isConnected)return;
+    const tabs=[['meteo','Meteo'],['sole','Sole e luna'],['allerte','Allerte'],
+      ['aspetto','Aspetto'],['avanzate','Avanzate']];
+    this.shadowRoot.innerHTML=`<style>${WP_EDITOR_CSS}</style><div class="wp-editor">
+      <div class="wp-tabs" role="group" aria-label="Impostazioni Weather Pulse">
+        ${tabs.map(([value,label])=>`<button type="button" class="wp-tab ${this._tab===value?'active':''}"
+          data-tab="${value}" aria-pressed="${this._tab===value?'true':'false'}">${label}</button>`).join('')}
+      </div>${this._content()}</div>`;
+    const wrapper=this.shadowRoot.querySelector('.wp-editor');
+    if(!customElements.get('ha-selector')){
+      wrapper.classList.add('wp-no-native');
+      return;
+    }
+    this.shadowRoot.querySelectorAll('[data-selector]').forEach(target=>{
+      this._selector(target,target.dataset.selector);
     });
-    this.shadowRoot.querySelector('[data-selector]').appendChild(selector);
-    const alertSelector=document.createElement('ha-selector');
-    alertSelector.hass=this._hass;
-    alertSelector.selector={entity:{domain:['sensor','binary_sensor']}};
-    alertSelector.value=c.alert_entity||'';
-    alertSelector.setAttribute('aria-label','Entità allerta');
-    alertSelector.addEventListener('value-changed',e=>{
-      e.stopPropagation();
-      if(e.detail&&Object.prototype.hasOwnProperty.call(e.detail,'value'))
-        this._update('alert_entity',wpAlertEntity(e.detail.value));
-    });
-    this.shadowRoot.querySelector('[data-alert-selector]').appendChild(alertSelector);
   }
-  connectedCallback() { this._render(); }
+  connectedCallback() {this._render();}
 }
 if (!customElements.get(WP_TAG)) customElements.define(WP_TAG,WeatherPulseCard);
 if (!customElements.get(WP_EDITOR_TAG)) customElements.define(WP_EDITOR_TAG,WeatherPulseCardEditor);
