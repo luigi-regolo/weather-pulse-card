@@ -336,10 +336,12 @@ function wpMoonDetails(entity) {
 }
 
 const WP_CSS = `
-:host{display:block;box-sizing:border-box;width:100%;max-width:100%;min-width:0;container-type:inline-size;font-family:var(--ha-font-family-body,Roboto,Arial,sans-serif);color:var(--wp-fg);font-size:var(--ha-font-size-m,14px)}
+:host{display:block;box-sizing:border-box;width:100%;max-width:100%;min-width:0;font-family:var(--ha-font-family-body,Roboto,Arial,sans-serif);color:var(--wp-fg);font-size:var(--ha-font-size-m,14px)}
 *,*:before,*:after{box-sizing:border-box}
+.wp-container{display:block;width:100%;max-width:100%;min-width:0;container-type:inline-size}
 .wp-shell{--wp-accent:#0a7156;--wp-bg:#fafbf9;--wp-tile:#f0f2ef;--wp-circle:#fff;--wp-line:#e0e5df;--wp-fg:#18221c;--wp-muted:#56675c;background:var(--wp-bg);color:var(--wp-fg);border:1px solid var(--wp-line);border-radius:26px;padding:18px;width:100%;max-width:100%;min-width:0}
-.wp-shell.wp-dark{--wp-accent:#0e795d;--wp-bg:#101211;--wp-tile:#191c1a;--wp-circle:#282b29;--wp-line:#2b302c;--wp-fg:#f5f7f4;--wp-muted:#bbc5bd}
+.wp-backdrop{--wp-accent:#0a7156;--wp-bg:#fafbf9;--wp-tile:#f0f2ef;--wp-circle:#fff;--wp-line:#e0e5df;--wp-fg:#18221c;--wp-muted:#56675c}
+.wp-shell.wp-dark,.wp-backdrop.wp-dark{--wp-accent:#0e795d;--wp-bg:#101211;--wp-tile:#191c1a;--wp-circle:#282b29;--wp-line:#2b302c;--wp-fg:#f5f7f4;--wp-muted:#bbc5bd}
 .wp-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin:2px 4px 17px}
 .wp-eyebrow{font-size:10px;letter-spacing:1.7px;font-weight:750;color:var(--wp-muted);margin-bottom:7px}
 .wp-title{font-size:25px;line-height:1.14;font-weight:780;letter-spacing:-.7px;overflow-wrap:anywhere}
@@ -549,7 +551,7 @@ class WeatherPulseCard extends HTMLElement {
         <div class="wp-sub">Max ${wpNumber(d.temperature)===null?'—':wpEscape(wpTemp(d.temperature,unit))} ·
         Min ${wpNumber(d.templow)===null?'—':wpEscape(wpTemp(d.templow,unit))}${rain.length?' · '+rain.map(wpEscape).join(' · '):''}</div></div>`;
     }).join(''):'<div class="wp-empty">Previsioni giornaliere non disponibili.</div>';
-    return `<div class="wp-backdrop" data-backdrop="1"><div class="wp-dialog" role="dialog" aria-modal="true" aria-label="Dettagli meteo">
+    return `<div class="wp-backdrop ${this._isDark()?'wp-dark':'wp-light'}" data-backdrop="1"><div class="wp-dialog" role="dialog" aria-modal="true" aria-label="Dettagli meteo">
       <div class="wp-dialog-head"><strong>Dettagli meteo</strong><button type="button" class="wp-close" data-close="1" aria-label="Chiudi">${wpIcon('close')}</button></div>
       <div class="wp-detail-heading">Prossime 8 ore</div>${hourly}
       <div class="wp-detail-heading">Prossimi 3 giorni</div>${daily}
@@ -583,7 +585,7 @@ class WeatherPulseCard extends HTMLElement {
       '<div class="wp-forecast-heading">PROSSIMI 3 GIORNI</div><div class="wp-forecast-note">'+
       (this._forecastState.daily==='loading'?'Caricamento previsioni…':'Previsioni non disponibili.')+'</div>';
     this.shadowRoot.innerHTML = `<style>${WP_CSS}</style>
-      <div class="wp-shell ${this._isDark()?'wp-dark':'wp-light'}">
+      <div class="wp-container"><div class="wp-shell ${this._isDark()?'wp-dark':'wp-light'}">
         <div class="wp-head"><div><div class="wp-eyebrow">${wpEscape(this._config.eyebrow)}</div>
           <div class="wp-title">${wpEscape(this._config.title)}<b>.</b></div></div>
           <div class="wp-datetime">${wpEscape(wpDate(now))}<div class="wp-clock">${wpEscape(wpClock(now))}</div></div>
@@ -599,8 +601,8 @@ class WeatherPulseCard extends HTMLElement {
           ${this._config.weather_entity ? '' : '<div class="wp-empty">Seleziona un’entità meteo nell’editor della card.</div>'}
         </div>
         <button type="button" class="wp-detail" data-open="1">${wpIcon('information-outline')} Dettagli e stato</button>
-        ${this._open ? this._popup(entity) : ''}
-      </div>`;
+      </div></div>
+      ${this._open ? this._popup(entity) : ''}`;
   }
 }
 const WP_EDITOR_CSS=`
