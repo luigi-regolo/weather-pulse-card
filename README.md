@@ -1,3 +1,5 @@
+[![TikTok | Segui](assets/tiktok-segui.svg)](https://www.tiktok.com/@luigi.regolo)
+
 # Weather Pulse Card
 
 **Weather Pulse Card** è una custom card per le dashboard di Home Assistant dedicata alle condizioni meteorologiche e alle previsioni, con un'interfaccia minimal ispirata al design Edera.
