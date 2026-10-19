@@ -4,7 +4,7 @@
 
 ## Funzionalità
 
-- **Meteo attuale:** condizioni, temperatura, temperatura percepita, data e ora.
+- **Meteo attuale:** condizioni, temperatura, data e ora.
 - **Previsioni dei prossimi 3 giorni:** condizioni meteorologiche e temperature minime e massime in riquadri compatti.
 - **Alba e tramonto:** orari visibili direttamente nella card principale.
 - **Dettagli e stato:** pannello con previsioni delle prossime 8 ore, andamento delle temperature, probabilità di precipitazione e informazioni aggiuntive.
