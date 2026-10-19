@@ -2,6 +2,10 @@
 
 **Weather Pulse Card** è una custom card per le dashboard di Home Assistant dedicata alle condizioni meteorologiche e alle previsioni, con un'interfaccia minimal ispirata al design Edera.
 
+## Anteprima
+
+![Weather Pulse Card — schermata principale in tema Edera Light](assets/weather-pulse-card-preview.webp)
+
 ## Funzionalità
 
 - **Meteo attuale:** condizioni, temperatura, data e ora.
