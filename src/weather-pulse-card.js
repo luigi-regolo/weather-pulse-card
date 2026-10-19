@@ -113,6 +113,12 @@ class WeatherPulseCard extends HTMLElement {
     this._open = false;
     this._clockTimer = null;
     this._lastSignature = '';
+    this._forecast = {daily:null,hourly:null};
+    this._forecastState = {daily:'idle',hourly:'idle'};
+    this._forecastUnsubscribe = [];
+    this._forecastConnection = null;
+    this._forecastId = '';
+    this._forecastVersion = 0;
     this._media = typeof window.matchMedia === 'function' ? window.matchMedia('(prefers-color-scheme: dark)') : null;
     this._onAppearance = () => { this._lastSignature=''; this._paint(); };
     this.shadowRoot.addEventListener('click', e => {
@@ -126,15 +132,61 @@ class WeatherPulseCard extends HTMLElement {
   connectedCallback() {
     this._media?.addEventListener?.('change', this._onAppearance);
     this._clockTimer = window.setInterval(() => this._paint(), 15000);
+    this._subscribeForecasts();
     this._paint();
   }
   disconnectedCallback() {
     this._media?.removeEventListener?.('change', this._onAppearance);
     if (this._clockTimer !== null) window.clearInterval(this._clockTimer);
     this._clockTimer = null;
+    this._unsubscribeForecasts();
   }
-  setConfig(raw) { this._config=wpConfig(raw); this._lastSignature=''; this._paint(); }
-  set hass(hass) { this._hass=hass; this._paint(); }
+  setConfig(raw) {
+    const next=wpConfig(raw);
+    if(next.weather_entity!==this._config.weather_entity)this._unsubscribeForecasts();
+    this._config=next;this._lastSignature='';this._subscribeForecasts();this._paint();
+  }
+  set hass(hass) {
+    if(this._hass?.connection && this._hass.connection!==hass?.connection)this._unsubscribeForecasts();
+    this._hass=hass;this._subscribeForecasts();this._paint();
+  }
+  _unsubscribeForecasts() {
+    this._forecastVersion++;
+    for(const off of this._forecastUnsubscribe.splice(0)) {
+      try {Promise.resolve(off()).catch(()=>{});} catch {}
+    }
+    this._forecastConnection=null;this._forecastId='';
+    this._forecast={daily:null,hourly:null};
+    this._forecastState={daily:'idle',hourly:'idle'};
+  }
+  _subscribeForecasts() {
+    const id=this._config.weather_entity;
+    const conn=this._hass?.connection;
+    if(!this.isConnected||!id||!conn||typeof conn.subscribeMessage!=='function')return;
+    if(this._forecastConnection===conn && this._forecastId===id)return;
+    this._unsubscribeForecasts();
+    this._forecastConnection=conn;this._forecastId=id;
+    const version=this._forecastVersion;
+    const features=Number(this._hass?.states?.[id]?.attributes?.supported_features||0);
+    for(const [type,feature] of [['daily',1],['hourly',2]]) {
+      if(features!==0 && !(features&feature)){this._forecastState[type]='unsupported';continue;}
+      this._forecastState[type]='loading';
+      Promise.resolve().then(()=>conn.subscribeMessage(event=>{
+        if(version!==this._forecastVersion||id!==this._forecastId)return;
+        this._forecast[type]=Array.isArray(event?.forecast)?event.forecast:[];
+        this._forecastState[type]='ready';this._lastSignature='';this._paint();
+      },{type:'weather/subscribe_forecast',entity_id:id,forecast_type:type}))
+      .then(off=>{
+        if(version!==this._forecastVersion){
+          if(typeof off==='function')Promise.resolve(off()).catch(()=>{});
+        }else if(typeof off==='function')this._forecastUnsubscribe.push(off);
+      })
+      .catch(()=>{
+        if(version!==this._forecastVersion)return;
+        this._forecastState[type]='error';this._lastSignature='';this._paint();
+      });
+    }
+  }
   getCardSize() { return 3; }
   _weather() { return this._hass?.states?.[this._config.weather_entity]; }
   _isDark() {
@@ -158,7 +210,7 @@ class WeatherPulseCard extends HTMLElement {
     const entity = this._weather();
     const attrs = wpKnown(entity) ? entity.attributes || {} : {};
     const now = new Date();
-    const signature = JSON.stringify([this._config,this._hass?.themes?.darkMode,this._isDark(),entity?.state,attrs,Math.floor(now.getTime()/60000),this._open]);
+    const signature = JSON.stringify([this._config,this._hass?.themes?.darkMode,this._isDark(),entity?.state,attrs,Math.floor(now.getTime()/60000),this._open,this._forecast,this._forecastState]);
     if (signature === this._lastSignature) return;
     this._lastSignature = signature;
     const known = wpKnown(entity);
