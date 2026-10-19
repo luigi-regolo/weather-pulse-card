@@ -2,9 +2,7 @@
 
 **Weather Pulse Card** è una custom card per le dashboard di Home Assistant dedicata alle condizioni meteorologiche e alle previsioni, con un'interfaccia minimal ispirata al design Edera.
 
-> **Stato del progetto:** in sviluppo. Non è ancora disponibile una versione installabile. Le istruzioni di installazione saranno pubblicate dopo i test della prima release.
-
-## Funzionalità previste
+## Funzionalità
 
 - **Meteo attuale:** condizioni, temperatura, temperatura percepita, data e ora.
 - **Previsioni dei prossimi 3 giorni:** condizioni meteorologiche e temperature minime e massime in riquadri compatti.
@@ -20,15 +18,15 @@
 
 La card è progettata per utilizzare le entità meteorologiche già configurate in Home Assistant e le relative previsioni orarie e giornaliere, senza imporre un servizio meteo proprietario.
 
-Le informazioni su alba e tramonto dipenderanno dall'integrazione **Sun** di Home Assistant. I dati lunari e le allerte richiederanno fonti compatibili, ove disponibili.
+Gli orari di alba e tramonto si basano sull'integrazione **Sun** di Home Assistant. I dati lunari e le allerte sono opzionali e dipendono dalle sorgenti compatibili configurate.
 
-Il progetto non richiederà abbonamenti o API a pagamento per le proprie funzionalità. Disponibilità dei dati, limiti d'uso ed eventuali condizioni del provider meteorologico dipendono dall'integrazione scelta.
+La card non richiede abbonamenti o API a pagamento per le proprie funzionalità. Disponibilità dei dati, limiti d'uso ed eventuali condizioni del provider meteorologico dipendono dall'integrazione scelta.
 
-Quando una sorgente non fornisce un dato, la card non lo presenterà come una misurazione o una previsione certa.
+I dati non disponibili non vengono presentati come misurazioni o previsioni certe.
 
 ## Allerte meteorologiche
 
-Le allerte saranno una funzione opzionale, basata sulle informazioni fornite da una sorgente configurata in Home Assistant. La presenza, la classificazione e la durata di un'allerta dipenderanno dai dati effettivamente disponibili.
+Le allerte sono opzionali e dipendono dalle informazioni esposte da una sorgente compatibile configurata in Home Assistant. Livello di gravità, tipologia, validità e dettagli sono visualizzati soltanto quando disponibili.
 
 Le informazioni mostrate dalla card non sostituiscono gli avvisi e le indicazioni delle autorità competenti. Per situazioni di rischio fare riferimento ai canali ufficiali di Protezione Civile e delle autorità locali.
 
