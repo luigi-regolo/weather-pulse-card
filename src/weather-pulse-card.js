@@ -116,6 +116,76 @@ function wpHoursHTML(hours,unit,zone){
   }).join('')}</div>${graph}</div>`;
 }
 
+function wpSolarDay(now,zone,latitude,longitude,sunEntity) {
+  const key=wpDayKey(now,zone),p=key.split('-').map(Number);
+  if(p.length!==3||p.some(v=>!Number.isInteger(v)))return {rise:null,set:null,progress:null,duration:null};
+  const base=Date.UTC(p[0],p[1]-1,p[2]),lat=wpNumber(latitude),lon=wpNumber(longitude);
+  let rise=null,set=null;
+  if(lat!==null&&lon!==null&&lat>=-90&&lat<=90&&lon>=-180&&lon<=180){
+    const rad=Math.PI/180,phi=lat*rad,day=(base-Date.UTC(p[0],0,1))/86400000+1;
+    function calculate(kind){
+      let minutes=kind==='rise'?360:1080;
+      for(let i=0;i<4;i++){
+        const g=2*Math.PI/365*(day-1+(minutes/60-12)/24);
+        const eq=229.18*(.000075+.001868*Math.cos(g)-.032077*Math.sin(g)-.014615*Math.cos(2*g)-.040849*Math.sin(2*g));
+        const dec=.006918-.399912*Math.cos(g)+.070257*Math.sin(g)-.006758*Math.cos(2*g)+.000907*Math.sin(2*g)-.002697*Math.cos(3*g)+.00148*Math.sin(3*g);
+        const cosH=(Math.cos(90.833*rad)/(Math.cos(phi)*Math.cos(dec)))-Math.tan(phi)*Math.tan(dec);
+        if(!Number.isFinite(cosH)||cosH>1||cosH< -1)return null;
+        const hourAngle=Math.acos(cosH)/rad;
+        minutes=720-4*(lon+(kind==='rise'?hourAngle:-hourAngle))-eq;
+      }
+      const date=new Date(base+minutes*60000);
+      return wpDayKey(date,zone)===key?date:null;
+    }
+    rise=calculate('rise');set=calculate('set');
+  }
+  // sun.sun exposes the next events only. Use HA's precise timestamps when
+  // they refer to today; otherwise retain the local computation for past events.
+  const attrs=wpKnown(sunEntity)?sunEntity.attributes||{}:{};
+  for(const [kind,attribute] of [['rise','next_rising'],['set','next_setting']]){
+    const stamp=attrs[attribute],date=typeof stamp==='string'?new Date(stamp):null;
+    if(!date||!Number.isFinite(date.getTime())||wpDayKey(date,zone)!==key)continue;
+    if(kind==='rise')rise=date;else set=date;
+  }
+  if(!rise||!set||rise.getTime()>=set.getTime())return {rise:null,set:null,progress:null,duration:null};
+  const elapsed=(now.getTime()-rise.getTime())/(set.getTime()-rise.getTime());
+  return {rise,set,progress:Math.max(0,Math.min(1,elapsed)),duration:Math.round((set.getTime()-rise.getTime())/60000)};
+}
+
+function wpSolarTime(event,zone){
+  return event?wpEscape(wpLocalLabel(event,{hour:'2-digit',minute:'2-digit'},zone)):'Non disponibile';
+}
+
+function wpSolarDuration(minutes){
+  if(!Number.isFinite(minutes))return 'Non disponibile';
+  const hrs=Math.floor(minutes/60),mins=minutes%60;
+  return `${hrs} h ${String(mins).padStart(2,'0')} min`;
+}
+
+function wpSolarCards(sun,zone){
+  return `<div class="wp-sun-cards">
+    <div class="wp-sun-card"><span class="wp-sun-orb">${wpIcon('weather-sunset-up')}</span>
+      <div><span class="wp-sun-label">Alba</span><strong>${wpSolarTime(sun.rise,zone)}</strong></div></div>
+    <div class="wp-sun-card"><span class="wp-sun-orb">${wpIcon('weather-sunset-down')}</span>
+      <div><span class="wp-sun-label">Tramonto</span><strong>${wpSolarTime(sun.set,zone)}</strong></div></div>
+  </div>`;
+}
+
+function wpSolarArc(sun,zone){
+  if(!sun.rise||!sun.set)return '<div class="wp-empty">Dati solari non disponibili.</div>';
+  const t=sun.progress,x=(20+260*t).toFixed(2),y=(100-240*t*(1-t)).toFixed(2);
+  return `<div class="wp-solar-detail">
+    <svg class="wp-solar-svg" viewBox="0 0 300 115" role="img" aria-label="Avanzamento della giornata tra alba e tramonto">
+      <path d="M 20 100 Q 150 -20 280 100" fill="none" stroke="var(--wp-line)" stroke-width="3" stroke-linecap="round"/>
+      <line x1="20" y1="100" x2="280" y2="100" stroke="var(--wp-line)" stroke-width="1"/>
+      <circle cx="${x}" cy="${y}" r="8" fill="var(--wp-accent)"/>
+    </svg>
+    <div class="wp-sun-times"><span>${wpIcon('weather-sunset-up')} ${wpSolarTime(sun.rise,zone)}</span>
+      <span>${wpIcon('weather-sunset-down')} ${wpSolarTime(sun.set,zone)}</span></div>
+    <div class="wp-solar-duration">Durata del giorno · <strong>${wpEscape(wpSolarDuration(sun.duration))}</strong></div>
+  </div>`;
+}
+
 const WP_CSS = `
 :host{display:block;box-sizing:border-box;font-family:var(--ha-font-family-body,Roboto,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif);color:var(--wp-fg);font-size:14px}
 *,*:before,*:after{box-sizing:border-box}
@@ -165,6 +235,23 @@ button{font:inherit;cursor:pointer}button:focus-visible{outline:2px solid var(--
 .wp-hour-chart{display:block;width:496px;height:70px}
 .wp-daily-detail{background:var(--wp-tile);border-radius:13px;margin-top:7px;padding:11px 13px}
 .wp-daily-detail strong{font-size:12px}.wp-daily-detail .wp-sub{margin-top:5px}
+
+.wp-sun-heading{color:var(--wp-muted);font-size:10px;font-weight:700;letter-spacing:1px;margin:14px 1px 8px}
+.wp-sun-cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.wp-sun-card{display:flex;gap:10px;align-items:center;min-width:0;background:var(--wp-circle);border:1px solid var(--wp-line);padding:9px;border-radius:16px}
+.wp-sun-orb{display:grid;place-items:center;flex:none;width:35px;height:35px;background:var(--wp-tile);border-radius:50%}
+.wp-sun-orb ha-icon{width:20px;height:20px;--mdc-icon-size:20px;color:var(--wp-fg)}
+.wp-sun-card>div{display:flex;flex-direction:column;gap:4px;min-width:0}
+.wp-sun-label{font-size:11px;color:var(--wp-muted)}
+.wp-sun-card strong{font-size:12px;font-weight:650;white-space:nowrap}
+.wp-solar-detail{background:var(--wp-tile);border:1px solid var(--wp-line);border-radius:17px;padding:10px 14px}
+.wp-solar-svg{width:100%;height:122px;display:block}
+.wp-sun-times{display:flex;align-items:center;justify-content:space-between;gap:14px;font-size:12px;font-weight:650}
+.wp-sun-times span{display:flex;align-items:center;gap:5px}
+.wp-sun-times ha-icon{width:16px;height:16px;--mdc-icon-size:16px}
+.wp-solar-duration{text-align:center;margin-top:14px;color:var(--wp-muted);font-size:11px}
+.wp-solar-duration strong{color:var(--wp-fg)}
+@media(max-width:330px){.wp-sun-card{padding:7px;gap:6px}.wp-sun-orb{width:29px;height:29px}.wp-sun-card strong{font-size:11px}}
 @media(max-width:420px){.wp-shell{padding:13px;border-radius:23px}.wp-title{font-size:23px}.wp-head{gap:7px}.wp-datetime{font-size:10px}.wp-clock{font-size:19px}.wp-orb{width:43px;height:43px}.wp-temp{font-size:25px}.wp-panel{padding:10px}}
 @media(prefers-reduced-motion:reduce){.wp-detail{transition:none}}
 `;
@@ -254,7 +341,7 @@ class WeatherPulseCard extends HTMLElement {
       });
     }
   }
-  getCardSize() { return 4; }
+  getCardSize() { return 5; }
   _zone(){return this._hass?.config?.time_zone||Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC';}
   _weather() { return this._hass?.states?.[this._config.weather_entity]; }
   _isDark() {
@@ -266,6 +353,7 @@ class WeatherPulseCard extends HTMLElement {
     const a=wpKnown(entity)?entity.attributes||{}:{};
     const unit=wpText(a.temperature_unit||this._hass?.config?.unit_system?.temperature||'°C',8);
     const zone=this._zone(),hours=wpNextHours(this._forecast.hourly),days=wpNextDays(this._forecast.daily,new Date(),zone);
+    const sun=wpSolarDay(new Date(),zone,this._hass?.config?.latitude,this._hass?.config?.longitude,this._hass?.states?.['sun.sun']);
     const metrics=[['Temperatura',wpTemp(a.temperature,unit)],['Temperatura percepita',wpTemp(a.apparent_temperature,unit)],
       ['Umidità',wpMetric(a.humidity,'%')],['Vento',wpMetric(a.wind_speed,a.wind_speed_unit?' '+wpText(a.wind_speed_unit,14):'')],
       ['Pressione',wpMetric(a.pressure,a.pressure_unit?' '+wpText(a.pressure_unit,14):'')]];
@@ -282,6 +370,7 @@ class WeatherPulseCard extends HTMLElement {
       <div class="wp-dialog-head"><strong>Dettagli meteo</strong><button type="button" class="wp-close" data-close="1" aria-label="Chiudi">${wpIcon('close')}</button></div>
       <div class="wp-detail-heading">Prossime 8 ore</div>${hourly}
       <div class="wp-detail-heading">Prossimi 3 giorni</div>${daily}
+      <div class="wp-detail-heading">Sole</div>${wpSolarArc(sun,zone)}
       <div class="wp-detail-heading">Condizioni attuali</div>
       ${metrics.map(([label,value])=>`<div class="wp-metric"><span>${wpEscape(label)}</span><strong>${wpEscape(value)}</strong></div>`).join('')}
     </div></div>`;
@@ -292,7 +381,7 @@ class WeatherPulseCard extends HTMLElement {
     const entity = this._weather();
     const attrs = wpKnown(entity) ? entity.attributes || {} : {};
     const now = new Date();
-    const signature = JSON.stringify([this._config,this._hass?.themes?.darkMode,this._isDark(),entity?.state,attrs,Math.floor(now.getTime()/60000),this._open,this._forecast,this._forecastState,this._hass?.config?.time_zone]);
+    const signature = JSON.stringify([this._config,this._hass?.themes?.darkMode,this._isDark(),entity?.state,attrs,Math.floor(now.getTime()/60000),this._open,this._forecast,this._forecastState,this._hass?.config?.time_zone,this._hass?.config?.latitude,this._hass?.config?.longitude,this._hass?.states?.['sun.sun']?.state,this._hass?.states?.['sun.sun']?.attributes]);
     if (signature === this._lastSignature) return;
     this._lastSignature = signature;
     const known = wpKnown(entity);
@@ -303,6 +392,7 @@ class WeatherPulseCard extends HTMLElement {
       `<div class="wp-location">${wpIcon('map-marker-outline')}${wpEscape(this._config.location_label)}</div>` : '';
     const zone=this._zone(),unit=wpText(attrs.temperature_unit||this._hass?.config?.unit_system?.temperature||'°C',8);
     const days=wpNextDays(this._forecast.daily,now,zone);
+    const sun=wpSolarDay(now,zone,this._hass?.config?.latitude,this._hass?.config?.longitude,this._hass?.states?.['sun.sun']);
     const daySection=!this._config.weather_entity?'':days.length?
       '<div class="wp-forecast-heading">PROSSIMI 3 GIORNI</div><div class="wp-days">'+days.map(d=>wpDayTile(d,unit,zone)).join('')+'</div>':
       '<div class="wp-forecast-heading">PROSSIMI 3 GIORNI</div><div class="wp-forecast-note">'+
@@ -320,6 +410,7 @@ class WeatherPulseCard extends HTMLElement {
             ${location}
           </div></div>
           ${daySection}
+          <div class="wp-sun-heading">ALBA E TRAMONTO</div>${wpSolarCards(sun,zone)}
           ${this._config.weather_entity ? '' : '<div class="wp-empty">Seleziona un’entità meteo nell’editor della card.</div>'}
         </div>
         <button type="button" class="wp-detail" data-open="1">${wpIcon('information-outline')} Dettagli e stato</button>
