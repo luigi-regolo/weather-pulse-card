@@ -128,6 +128,10 @@ function wpRainSummary(data,unit='') {
   return parts;
 }
 
+function wpCloudCoverage(value){
+  const n=wpNumber(value);
+  return n!==null&&n>=0&&n<=100?wpMetric(n,'%'):null;
+}
 function wpHoursHTML(hours,unit,zone,showChart=true,precipitationUnit=''){
   if(!hours.length)return '<div class="wp-empty">Previsioni orarie non disponibili.</div>';
   const valid=hours.map(x=>wpNumber(x.temperature)).filter(v=>v!==null);
@@ -143,11 +147,12 @@ function wpHoursHTML(hours,unit,zone,showChart=true,precipitationUnit=''){
        ${points.filter(Boolean).map(p=>`<circle cx="${p[0].toFixed(2)}" cy="${p[1].toFixed(2)}" r="3" fill="var(--wp-accent)"/>`).join('')}</svg>`;
   }
   return `<div class="wp-hour-scroll"><div class="wp-hour-grid">${hours.map(x=>{
-    const [mdi]=wpCondition(x.condition),temp=wpNumber(x.temperature),rain=wpRainData(x,precipitationUnit);
+    const [mdi]=wpCondition(x.condition),temp=wpNumber(x.temperature),rain=wpRainData(x,precipitationUnit),cloud=wpCloudCoverage(x.cloud_coverage);
     return `<div class="wp-hour"><span>${wpEscape(wpLocalLabel(x.datetime,{hour:'2-digit',minute:'2-digit'},zone))}</span>
        ${wpIcon(mdi)}<strong>${temp===null?'—':wpEscape(wpTemp(temp,unit))}</strong>
        ${rain.probability===null?'':`<small class="wp-hour-rain" title="Probabilità precipitazioni">${wpEscape(rain.probability)}</small>`}
-       ${rain.amount===null?'':`<small class="wp-hour-rain" title="Quantità precipitazioni">${wpEscape(rain.amount)}</small>`}</div>`;
+       ${rain.amount===null?'':`<small class="wp-hour-rain" title="Quantità precipitazioni">${wpEscape(rain.amount)}</small>`}
+       ${cloud===null?'':`<small class="wp-hour-cloud" title="Copertura nuvolosa"><span>Nuvole</span><span>${wpEscape(cloud)}</span></small>`}</div>`;
   }).join('')}</div>${graph}</div>`;
 }
 
@@ -375,7 +380,7 @@ button{font:inherit;cursor:pointer}button:focus-visible{outline:2px solid var(--
 .wp-hour-grid{display:grid;grid-template-columns:repeat(8,62px);width:496px}
 .wp-hour{display:flex;flex-direction:column;align-items:center;gap:8px;font-size:11px}
 .wp-hour>span,.wp-hour>small{color:var(--wp-muted);font-size:10px}
-.wp-hour ha-icon{--mdc-icon-size:23px;width:23px;height:23px}.wp-hour strong{font-size:12px;font-weight:600}.wp-hour-rain{line-height:1.1;text-align:center;white-space:nowrap}
+.wp-hour ha-icon{--mdc-icon-size:23px;width:23px;height:23px}.wp-hour strong{font-size:12px;font-weight:600}.wp-hour-rain{line-height:1.1;text-align:center;white-space:nowrap}.wp-hour-cloud{display:flex;flex-direction:column;align-items:center;gap:1px;line-height:1.2;white-space:nowrap}
 .wp-hour-chart{display:block;width:496px;height:70px}
 .wp-daily-detail{background:var(--wp-tile);border-radius:13px;margin-top:7px;padding:11px 13px}
 .wp-daily-detail strong{font-size:12px;font-weight:600}.wp-daily-detail .wp-sub{margin-top:5px}
@@ -532,14 +537,15 @@ class WeatherPulseCard extends HTMLElement {
     const metrics=[['Temperatura',wpTemp(a.temperature,unit)],
       ['Umidità',wpMetric(a.humidity,'%')],['Vento',wpMetric(a.wind_speed,a.wind_speed_unit?' '+wpText(a.wind_speed_unit,14):'')],
       ['Pressione',wpMetric(a.pressure,a.pressure_unit?' '+wpText(a.pressure_unit,14):'')]];
+    const currentCloud=wpCloudCoverage(a.cloud_coverage);
+    if(currentCloud!==null)metrics.push(['Copertura nuvolosa',currentCloud]);
     const hourly=this._forecastState.hourly==='ready'?wpHoursHTML(hours,unit,zone,this._config.show_hourly_chart,precipitationUnit):
       '<div class="wp-empty">'+(this._forecastState.hourly==='loading'?'Caricamento previsioni…':'Previsioni orarie non disponibili.')+'</div>';
     const daily=this._forecastState.daily==='ready'&&days.length?days.map(d=>{
       const [,condition]=wpCondition(d.condition),rain=wpRainSummary(d,precipitationUnit);
       return `<div class="wp-daily-detail"><strong>${wpEscape(wpLocalLabel(d.datetime,{weekday:'long',day:'numeric',month:'long'},zone))} · ${wpEscape(condition)}</strong>
         <div class="wp-sub">Max ${wpNumber(d.temperature)===null?'—':wpEscape(wpTemp(d.temperature,unit))} ·
-        Min ${wpNumber(d.templow)===null?'—':wpEscape(wpTemp(d.templow,unit))} ·
-        ${rain.length?' · '+rain.map(wpEscape).join(' · '):''}</div></div>`;
+        Min ${wpNumber(d.templow)===null?'—':wpEscape(wpTemp(d.templow,unit))}${rain.length?' · '+rain.map(wpEscape).join(' · '):''}</div></div>`;
     }).join(''):'<div class="wp-empty">Previsioni giornaliere non disponibili.</div>';
     return `<div class="wp-backdrop" data-backdrop="1"><div class="wp-dialog" role="dialog" aria-modal="true" aria-label="Dettagli meteo">
       <div class="wp-dialog-head"><strong>Dettagli meteo</strong><button type="button" class="wp-close" data-close="1" aria-label="Chiudi">${wpIcon('close')}</button></div>
