@@ -4,6 +4,7 @@
  * No remote dependencies, telemetry, advertising or location requests.
  */
 const WP_TAG = 'weather-pulse-card';
+const WP_TYPE = 'custom:weather-pulse-card';
 const WP_EDITOR_TAG = 'weather-pulse-card-editor';
 const WP_DEFAULTS = Object.freeze({
   title: 'Meteo', eyebrow: 'WEATHER PULSE CARD', theme_mode: 'auto',
@@ -29,6 +30,9 @@ function wpEntity(value) {
 function wpConfig(raw = {}) {
   const r = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
   return {
+    // Keep Lovelace visibility and layout options during editor changes.
+    ...r,
+    type: WP_TYPE,
     title: wpText(r.title ?? WP_DEFAULTS.title, 60).replace(/\.+$/, '') || 'Meteo',
     eyebrow: wpText(r.eyebrow ?? WP_DEFAULTS.eyebrow, 60),
     theme_mode: ['auto', 'light', 'dark'].includes(r.theme_mode) ? r.theme_mode : 'auto',
@@ -307,7 +311,7 @@ function wpMoonDetails(entity) {
 }
 
 const WP_CSS = `
-:host{display:block;box-sizing:border-box;font-family:var(--ha-font-family-body,Roboto,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif);color:var(--wp-fg);font-size:14px}
+:host{display:block;box-sizing:border-box;font-family:var(--ha-font-family-body,Roboto,Arial,sans-serif);color:var(--wp-fg);font-size:var(--ha-font-size-m,14px)}
 *,*:before,*:after{box-sizing:border-box}
 .wp-shell{--wp-accent:#0a7156;--wp-bg:#fafbf9;--wp-tile:#f0f2ef;--wp-circle:#fff;--wp-line:#e0e5df;--wp-fg:#18221c;--wp-muted:#56675c;background:var(--wp-bg);color:var(--wp-fg);border:1px solid var(--wp-line);border-radius:26px;padding:18px;min-width:0}
 .wp-shell.wp-dark{--wp-accent:#0e795d;--wp-bg:#101211;--wp-tile:#191c1a;--wp-circle:#282b29;--wp-line:#2b302c;--wp-fg:#f5f7f4;--wp-muted:#bbc5bd}
@@ -331,11 +335,11 @@ const WP_CSS = `
 button{font:inherit;cursor:pointer}button:focus-visible{outline:2px solid var(--wp-accent);outline-offset:3px}
 .wp-empty{color:var(--wp-muted);font-size:12px;line-height:1.45}
 .wp-backdrop{position:fixed;inset:0;z-index:9999;background:#0009;display:grid;place-items:center;padding:16px}
-.wp-dialog{background:var(--wp-bg);color:var(--wp-fg);border:1px solid var(--wp-line);border-radius:26px;box-shadow:0 18px 60px #0005;padding:20px;width:min(430px,100%);max-height:90vh;overflow:auto}
-.wp-dialog-head{display:flex;align-items:center;gap:10px;justify-content:space-between;margin-bottom:15px}
-.wp-dialog-head strong{font-size:17px;font-weight:650}
-.wp-close{display:grid;place-items:center;width:36px;height:36px;flex:none;border:0;border-radius:50%;background:var(--wp-tile);color:var(--wp-fg)}
-.wp-close ha-icon{--mdc-icon-size:18px;width:18px;height:18px}
+.wp-dialog{background:var(--wp-bg);color:var(--wp-fg);border:1px solid var(--wp-line);border-radius:26px;box-shadow:0 18px 60px #0005;padding:20px;width:min(390px,100%);max-height:90vh;overflow:auto;font-family:inherit;font-size:inherit}
+.wp-dialog-head{display:flex;align-items:center;gap:10px;min-height:38px;margin-bottom:10px}
+.wp-dialog-head strong{flex:1;font-size:17px;font-weight:600;line-height:1.3}
+.wp-close{display:flex;align-items:center;justify-content:center;line-height:0;margin:0;padding:0;width:36px;height:36px;flex:none;border:0;border-radius:50%;background:var(--wp-tile);color:var(--wp-fg)}
+.wp-close ha-icon{display:block;flex:none;margin:0;--mdc-icon-size:18px;width:18px;height:18px}
 .wp-metric{display:flex;justify-content:space-between;align-items:center;gap:12px;background:var(--wp-tile);border:1px solid var(--wp-line);padding:12px 14px;border-radius:14px;margin-top:8px}
 .wp-metric span{color:var(--wp-muted);font-size:12px}
 .wp-metric strong{font-size:13px}
@@ -504,7 +508,7 @@ class WeatherPulseCard extends HTMLElement {
     const zone=this._zone(),hours=wpNextHours(this._forecast.hourly),days=wpNextDays(this._forecast.daily,new Date(),zone);
     const sun=wpSolarDay(new Date(),zone,this._hass?.config?.latitude,this._hass?.config?.longitude,this._hass?.states?.['sun.sun']);
     const alert=this._alert();
-    const metrics=[['Temperatura',wpTemp(a.temperature,unit)],['Temperatura percepita',wpTemp(a.apparent_temperature,unit)],
+    const metrics=[['Temperatura',wpTemp(a.temperature,unit)],
       ['Umidità',wpMetric(a.humidity,'%')],['Vento',wpMetric(a.wind_speed,a.wind_speed_unit?' '+wpText(a.wind_speed_unit,14):'')],
       ['Pressione',wpMetric(a.pressure,a.pressure_unit?' '+wpText(a.pressure_unit,14):'')]];
     const hourly=this._forecastState.hourly==='ready'?wpHoursHTML(hours,unit,zone,this._config.show_hourly_chart):
@@ -539,7 +543,6 @@ class WeatherPulseCard extends HTMLElement {
     const known = wpKnown(entity);
     const [icon, condition] = known ? wpCondition(entity.state) : ['weather-cloudy-alert','Meteo non disponibile'];
     const temperature = wpTemp(known ? attrs.temperature : null, wpText(attrs.temperature_unit || this._hass?.config?.unit_system?.temperature || '°C',8));
-    const perceived = wpNumber(attrs.apparent_temperature);
     const location = this._config.show_location && this._config.location_label ?
       `<div class="wp-location">${wpIcon('map-marker-outline')}${wpEscape(this._config.location_label)}</div>` : '';
     const zone=this._zone(),unit=wpText(attrs.temperature_unit||this._hass?.config?.unit_system?.temperature||'°C',8);
@@ -559,7 +562,6 @@ class WeatherPulseCard extends HTMLElement {
         <div class="wp-panel"><div class="wp-current">
           <span class="wp-orb">${wpIcon(icon)}</span><div class="wp-main">
             <div class="wp-temp">${wpEscape(temperature)}</div><div class="wp-condition">${wpEscape(condition)}</div>
-            <div class="wp-sub">${perceived === null ? 'Percepita · Non disponibile' : 'Percepita ' + wpEscape(wpTemp(perceived, wpText(attrs.temperature_unit || '°C',8)))}</div>
             ${location}
           </div></div>
           ${daySection}
@@ -621,6 +623,8 @@ class WeatherPulseCardEditor extends HTMLElement {
     this._section='previsioni';
     this._details={};
     this._nativeTried=false;
+    this._renderScheduled=false;
+    this._duringConfigEvent=false;
     this.shadowRoot.addEventListener('click',e=>this._click(e));
     this.shadowRoot.addEventListener('change',e=>this._change(e));
   }
@@ -632,7 +636,8 @@ class WeatherPulseCardEditor extends HTMLElement {
     const next=wpConfig(raw);
     if(JSON.stringify(next)===JSON.stringify(this._config)&&this.shadowRoot.querySelector('.wp-editor'))return;
     this._config=next;
-    this._render();
+    if(this._duringConfigEvent||this._renderScheduled)this._scheduleRender();
+    else this._render();
   }
   connectedCallback(){this._render();this._ensureNative();}
   async _ensureNative(){
@@ -646,10 +651,27 @@ class WeatherPulseCardEditor extends HTMLElement {
     }
     this._render();
   }
+  _scheduleRender(){
+    if(!this.isConnected||this._renderScheduled)return;
+    this._renderScheduled=true;
+    const done=()=>{this._renderScheduled=false;if(this.isConnected)this._render();};
+    if(typeof window!=='undefined'&&typeof window.requestAnimationFrame==='function'){
+      window.requestAnimationFrame(done);
+    }else Promise.resolve().then(done);
+  }
   _update(patch){
-    this._config=wpConfig({...this._config,...patch});
-    this.dispatchEvent(new CustomEvent('config-changed',{detail:{config:this._config},bubbles:true,composed:true}));
-    this._render();
+    const next=wpConfig({...this._config,...patch});
+    if(JSON.stringify(next)===JSON.stringify(this._config))return;
+    this._config=next;
+    this._duringConfigEvent=true;
+    try{
+      this.dispatchEvent(new CustomEvent('config-changed',{
+        detail:{config:this._config},bubbles:true,composed:true
+      }));
+    }finally{
+      this._duringConfigEvent=false;
+      this._scheduleRender();
+    }
   }
   _field(label,inner,help=''){
     return `<div class="wp-field"><div class="wp-label">${wpEscape(label)}</div>${inner}${help?`<div class="wp-tiny">${wpEscape(help)}</div>`:''}</div>`;
