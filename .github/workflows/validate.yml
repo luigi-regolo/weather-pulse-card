@@ -1,0 +1,33 @@
+name: Validate Weather Pulse Card
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "dist/**"
+      - "tests/**"
+      - "package.json"
+      - ".github/workflows/validate.yml"
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Verify Node version
+        run: node --version
+      - name: Check JavaScript syntax
+        run: npm run check
+      - name: Run regression tests
+        run: npm test
