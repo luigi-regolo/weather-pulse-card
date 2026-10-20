@@ -7,6 +7,7 @@ const src=fs.readFileSync(new URL('../src/weather-pulse-card.js',import.meta.url
 const dist=fs.readFileSync(new URL('../dist/weather-pulse-card.js',import.meta.url),'utf8');
 const context=vm.createContext({
   HTMLElement:class {},customElements:{get(){return undefined;},define(){}},
+  CustomEvent:class {constructor(type,options={}){this.type=type;this.detail=options.detail??null;this.bubbles=!!options.bubbles;this.composed=!!options.composed;}},
   window:undefined,Intl,Date,Math,Number,String,Array,Object,Set,Map,
 });
 vm.runInContext(src,context,{filename:'weather-pulse-card.js'});
