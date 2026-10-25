@@ -1,6 +1,7 @@
 # Weather Pulse Card
 
 [![TikTok | Segui](assets/tiktok-segui.svg)](https://www.tiktok.com/@luigi.regolo)
+[![Release](https://img.shields.io/github/v/release/luigi-regolo/weather-pulse-card?label=Release&style=flat-square)](https://github.com/luigi-regolo/weather-pulse-card/releases/latest)
 [![License: GPL-3.0-only](https://img.shields.io/badge/license-GPL--3.0--only-blue?style=flat-square)](LICENSE)
 [![HACS](https://img.shields.io/badge/HACS-Repository-41BDF5?style=flat-square)](https://my.home-assistant.io/redirect/hacs_repository/?owner=luigi-regolo&repository=weather-pulse-card&category=plugin)
 [![GitHub Stars](https://img.shields.io/github/stars/luigi-regolo/weather-pulse-card?style=flat-square)](https://github.com/luigi-regolo/weather-pulse-card/stargazers)
@@ -39,27 +40,29 @@ Displayed information depends on the capabilities of the configured weather inte
 
 ## Installation
 
-### HACS
+### HACS (Recommended)
 
-Weather Pulse Card can be installed through HACS using the custom GitHub repository.
+Install Weather Pulse Card directly from the default HACS catalog.
 
 [![Open Weather Pulse Card in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=luigi-regolo&repository=weather-pulse-card&category=plugin)
 
 1. Open **HACS** in Home Assistant.
-2. Search for **Weather Pulse Card** in the catalog.
-3. If it is not available in the default catalog, open the HACS menu and select **Custom repositories**.
-4. Enter the repository URL:
+2. Search for **Weather Pulse Card**.
+3. Select **Weather Pulse Card** from the results.
+4. Click **Download** to install the card.
+5. Reload your dashboard if necessary.
+6. Add **Weather Pulse Card** to your dashboard and configure it using the visual editor.
 
-   `https://github.com/luigi-regolo/weather-pulse-card`
+### Alternative: Custom repository
 
-5. Select **Dashboard** as the repository type and add it.
-6. Find **Weather Pulse Card** in HACS and download it.
-7. Reload the Home Assistant dashboard if necessary.
-8. Add the card using the visual editor.
+If you prefer to add the repository manually:
+
+1. Open **HACS** and select **Custom repositories** from the menu.
+2. Enter `https://github.com/luigi-regolo/weather-pulse-card`.
+3. Select **Dashboard** as the repository type and add it.
+4. Find **Weather Pulse Card** in HACS and download it.
 
 The repository contains `hacs.json` and the distributable JavaScript module `dist/weather-pulse-card.js`.
-
-**Note:** The HACS badge provides a shortcut to the repository in Home Assistant but does not necessarily indicate inclusion in the default HACS catalog.
 
 ### Manual installation
 
@@ -170,6 +173,10 @@ Their availability, accuracy, severity, and validity period depend on the config
 An unknown or unavailable status must not be interpreted as confirmation that no weather alerts exist.
 
 For emergency decisions and official warnings, always refer to the relevant public authorities.
+
+## Releases
+
+See [GitHub Releases](https://github.com/luigi-regolo/weather-pulse-card/releases) for published versions and release notes.
 
 ## Copyright & License
 
