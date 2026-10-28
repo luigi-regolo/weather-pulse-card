@@ -39,10 +39,32 @@ test('HTML escaping',()=>{
   assert.equal(get('wpEscape("<script>")'),'&lt;script&gt;');
   assert.doesNotMatch(get('wpAlertBanner(wpAlertData({entity_id:"sensor.alert",state:"red",attributes:{headline:"<script>"}}))'),/<script>/);
 });
-test('three days after today',()=>{
+test('up to six days after today',()=>{
+  const days=[19,20,21,22,23,24,25,26,27].map(d=>`{datetime:"2026-10-${d}T00:00:00+02:00"}`).join(',');
+  const x=get(`wpNextDays([${days}],new Date("2026-10-19T11:00:00Z"),"Europe/Rome")`);
+  assert.equal(x.length,6);
+  assert.equal(x[0].day,'2026-10-20');
+  assert.equal(x[5].day,'2026-10-25');
+});
+test('fewer than six days are shown as provided',()=>{
   const x=get('wpNextDays([{datetime:"2026-10-19T00:00:00+02:00"},{datetime:"2026-10-20T00:00:00+02:00"},{datetime:"2026-10-21T00:00:00+02:00"},{datetime:"2026-10-22T00:00:00+02:00"}],new Date("2026-10-19T11:00:00Z"),"Europe/Rome")');
   assert.equal(x.length,3);
   assert.equal(x[0].day,'2026-10-20');
+});
+test('day pages: dots only when more than three days',()=>{
+  assert.equal(get('wpDaysDots(3)'),'');
+  assert.equal(get('(wpDaysDots(4).match(/data-page=/g)||[]).length'),2);
+  assert.equal(get('(wpDaysDots(6).match(/data-page=/g)||[]).length'),2);
+  assert.match(get('wpDaysDots(6)'),/aria-label="Giorni 4–6"/);
+  assert.match(get('wpDaysDots(4)'),/aria-label="Giorni 4–4"/);
+  assert.equal(get('wpDaysTitle(6)'),'prossimi 6 giorni');
+  assert.equal(get('wpDaysTitle(1)'),'prossimo giorno');
+});
+test('daily forecast swipes in pages of three',()=>{
+  const css=get('WP_CSS');
+  assert.match(css,/\.wp-days\{[^}]*display:flex;[^}]*overflow-x:auto;[^}]*scroll-snap-type:x mandatory/);
+  assert.match(css,/\.wp-day\{flex:0 0 calc\(\(100% - 2\*var\(--wp-gap\)\)\/3\);scroll-snap-align:start/);
+  assert.match(css,/\.wp-dot\[aria-current="true"\]:before\{background:var\(--wp-accent\)/);
 });
 test('past hourly forecast is excluded',()=>{
   assert.equal(get('wpNextHours([{datetime:"2026-10-19T08:00:00Z"},{datetime:"2026-10-19T12:00:00Z"}],new Date("2026-10-19T11:00:00Z")).length'),1);
@@ -99,8 +121,8 @@ test('perceived temperature is absent',()=>{
 });
 test('popup Edera typography and close button are aligned',()=>{
   const css=get('WP_CSS');
-  assert.match(css,/\.wp-dialog-head strong\{flex:1;font-size:17px;font-weight:600/);
-  assert.match(css,/\.wp-close\{display:flex;align-items:center;justify-content:center;line-height:0/);
+  assert.match(css,/\.wp-mtitle\{flex:1;min-width:0;margin:0;font-size:17px;font-weight:600/);
+  assert.match(css,/\.wp-close\{display:grid;place-items:center;line-height:0;margin:0;padding:0;width:40px;height:40px/);
   assert.match(css,/\.wp-close ha-icon\{display:block;flex:none;margin:0/);
 });
 test('weather entity selection keeps type and defers editor repaint',async()=>{
@@ -127,7 +149,10 @@ test('Edera headings retain shared hierarchy with lighter weather labels',()=>{
 });
 test('details pill aligns icon and label like Edera badges',()=>{
   const css=get('WP_CSS');
-  assert.match(css,/\.wp-detail\{display:inline-flex;align-items:center;justify-content:center;vertical-align:top/);
+  assert.match(css,/\.wp-detail\{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:44px/);
+  assert.match(css,/\.wp-detail\{[^}]*color-mix\(in srgb,var\(--wp-accent\) 45%,transparent\)/);
+  assert.match(css,/\.wp-detail\{[^}]*color:var\(--wp-btn-fg\)/);
+  assert.match(src,/Dettagli e stato \$\{wpIcon\('chevron-right'\)\}/);
   assert.match(css,/\.wp-detail ha-icon\{display:block;flex:none;margin:0;/);
 });
 test('precipitation probability and quantity remain distinct',()=>{
@@ -213,14 +238,14 @@ test('weather card fits the dashboard column and adapts narrow cards',()=>{
 test('popup has compact viewport boundaries and a scrollable interior',()=>{
   const css=get('WP_CSS');
   assert.match(css,/\.wp-dialog\{[^}]*width:min\(390px,100%\)/);
-  assert.match(css,/@media\(max-width:599px\)\{\.wp-backdrop\{[^}]*\}\.wp-dialog\{width:min\(350px,100%\)/);
-  assert.match(css,/\.wp-dialog\{[^}]*max-height:min\(82dvh,720px\)/);
-  assert.match(css,/@media\(max-width:599px\)\{\.wp-backdrop\{[^}]*\}\.wp-dialog\{[^}]*max-height:min\(68dvh,560px\)/);
-  assert.match(css,/\.wp-dialog\{[^}]*overflow-y:auto;overflow-x:hidden/);
+  assert.doesNotMatch(css,/@media\(max-width:599px\)\{\.wp-backdrop/);
+  assert.match(css,/\.wp-dialog\{[^}]*max-height:min\(88dvh,680px\)/);
+  assert.match(css,/\.wp-dialog\{[^}]*display:flex;flex-direction:column;[^}]*overflow:hidden/);
+  assert.match(css,/\.wp-mbody\{overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain/);
   assert.doesNotMatch(css,/\.wp-dialog\{[^}]*max-height:90vh/);
   assert.match(css,/\.wp-backdrop\{[^}]*safe-area-inset-top/);
-  assert.match(css,/\.wp-dialog-head\{display:flex;align-items:center;gap:10px;min-height:38px;margin-bottom:10px\}/);
-  assert.doesNotMatch(css,/\.wp-dialog-head\{[^}]*position:sticky/);
+  assert.match(css,/\.wp-backdrop\{[^}]*safe-area-inset-right[^}]*safe-area-inset-bottom[^}]*safe-area-inset-left/);
+  assert.match(css,/\.wp-mhead\{flex:none;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 16px 12px 18px;background:var\(--wp-bg\);border-bottom:1px solid var\(--wp-line\)\}/);
   assert.match(css,/\.wp-hour-scroll\{[^}]*overflow-x:auto;max-width:100%/);
 });
 
@@ -228,32 +253,40 @@ test('popup remains viewport-positioned outside its responsive layout container'
   const css=get('WP_CSS');
   assert.match(css,/\.wp-container\{[^}]*container-type:inline-size/);
   assert.doesNotMatch(css,/:host\{[^}]*container-type:inline-size/);
-  assert.match(css,/\.wp-backdrop\{--wp-accent:#0a7156;/);
-  assert.match(css,/\.wp-shell\.wp-dark,\.wp-backdrop\.wp-dark\{--wp-accent:/);
+  assert.match(css,/\.wp-backdrop\{--wp-btn-fg:var\(--wp-accent\);--wp-accent:#0a7156;/);
+  assert.match(css,/\.wp-shell\.wp-dark,\.wp-backdrop\.wp-dark\{--wp-btn-fg:var\(--wp-fg\);--wp-accent:/);
   const card=Object.create(get('WeatherPulseCard.prototype'));
   card.isConnected=true;
   card._config=get('wpConfig({weather_entity:"weather.meteo"})');
   card._hass={themes:{darkMode:false},config:{latitude:45.4,longitude:9.1,time_zone:'Europe/Rome'},states:{'weather.meteo':{state:'cloudy',attributes:{temperature:17}}}};
   card._forecast={daily:[],hourly:[]};card._forecastState={daily:'idle',hourly:'idle'};
   card._open=true;card._lastSignature='';
-  card.shadowRoot={innerHTML:''};
+  card.shadowRoot={innerHTML:'',activeElement:null,querySelector(){return null;}};
   card._paint();
   const markup=card.shadowRoot.innerHTML;
   assert.match(markup,/<div class="wp-container"><div class="wp-shell wp-light">/);
-  assert.match(markup,/<\/button>\s*<\/div><\/div>\s*<div class="wp-backdrop wp-light"/);
-  assert.match(markup,/class="wp-dialog"/);
+  assert.match(markup,/<\/button><\/div>\s*<\/div><\/div>\s*<div class="wp-backdrop wp-light"/);
+  assert.match(markup,/<div class="wp-foot"><button type="button" class="wp-detail"/);
+  assert.match(markup,/class="wp-dialog" role="dialog" aria-modal="true" aria-labelledby="wp-mt"/);
+  assert.match(markup,/<div class="wp-mhead"><h2 class="wp-mtitle" id="wp-mt">Dettagli meteo<\/h2>/);
+  assert.match(markup,/<div class="wp-mbody">/);
 });
 
-test('tablet modal has camera-grid style width and scrollable header',()=>{
+test('tablet modal has camera-grid style width and a fixed header',()=>{
   const css=get('WP_CSS');
-  assert.match(css,/\.wp-dialog\{[^}]*border-radius:26px;[^}]*padding:20px;width:min\(390px,100%\)/);
-  assert.match(css,/\.wp-dialog\{[^}]*max-height:min\(82dvh,720px\)/);
-  assert.match(css,/\.wp-dialog\{[^}]*overflow-y:auto;overflow-x:hidden/);
-  assert.match(css,/\.wp-dialog-head\{display:flex;align-items:center;gap:10px;min-height:38px;margin-bottom:10px\}/);
-  assert.doesNotMatch(css,/\.wp-dialog-head\{[^}]*position:sticky/);
+  assert.match(css,/\.wp-dialog\{width:min\(390px,100%\);[^}]*border-radius:26px;[^}]*overflow:hidden/);
+  assert.match(css,/\.wp-dialog\{[^}]*max-height:min\(88dvh,680px\)/);
+  assert.match(css,/\.wp-mbody\{overflow-y:auto;overflow-x:hidden/);
+  assert.match(css,/\.wp-mhead\{flex:none;[^}]*background:var\(--wp-bg\)/);
+  assert.doesNotMatch(css,/\.wp-dialog-head/);
 });
-test('phone popup stays narrow and tablet landscape remains inside viewport',()=>{
+test('phone popup keeps the shared size and tablet landscape remains inside viewport',()=>{
   const css=get('WP_CSS');
-  assert.match(css,/@media\(max-width:599px\)\{\.wp-backdrop\{[^}]*\}\.wp-dialog\{width:min\(350px,100%\);max-height:min\(68vh,560px\);max-height:min\(68dvh,560px\)/);
+  assert.doesNotMatch(css,/68dvh|68vh/);
   assert.match(css,/@media\(max-height:480px\)\{\.wp-dialog\{max-height:calc\(100vh - 32px\);max-height:calc\(100dvh - 32px\)/);
+});
+
+test('popup keeps focus handling, scroll lock and scroll position across repaints',()=>{
+  for(const piece of ["document.addEventListener('keydown', this._onKey)","document.removeEventListener('keydown', this._onKey)","event.key === 'Escape'","_lockScroll()","'wp-hour-scroll'","keep.body","keep.hours","keep.days","this._pendingFocus = 'open'","this._pendingFocus = 'close'"])
+    assert.ok(src.includes(piece),piece);
 });

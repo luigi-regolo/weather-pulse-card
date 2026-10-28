@@ -16,14 +16,18 @@ The card uses weather entities and forecasts already available in Home Assistant
 
 ## Preview
 
-![Weather Pulse Card — Edera Light dashboard preview](assets/weather-pulse-card-preview.webp)
+![Weather Pulse Card — Edera Light dashboard preview](assets/weather-pulse-card-light.png)
 
-*Weather Pulse Card interface in Edera Light mode. The displayed weather information depends on the configured Home Assistant integration.*
+![Weather Pulse Card — Edera Dark dashboard preview](assets/weather-pulse-card-dark.png)
+
+![Weather Pulse Card — details popup](assets/weather-pulse-card-popup-light.png)
+
+*Previews use fictional demo data. The interface text is currently in Italian. The displayed weather information depends on the configured Home Assistant integration.*
 
 ## Features
 
 - **Current weather:** Temperature, weather conditions, date, and time.
-- **Three-day forecast:** Forecast conditions and daily minimum and maximum temperatures.
+- **Six-day forecast:** Forecast conditions and daily minimum and maximum temperatures for up to six days, shown three at a time. Swipe horizontally or use the page dots to see the remaining days, when the weather source provides them.
 - **Hourly forecast:** The next eight hours, weather icons, temperatures, and an optional temperature trend chart.
 - **Precipitation:** Forecast probability (%) and precipitation amount (mm or another supported unit), when provided by the weather source.
 - **Cloud coverage:** Percentage shown when available from the weather entity or hourly forecasts.

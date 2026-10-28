@@ -91,7 +91,7 @@ function wpNextDays(items,now=new Date(),zone='UTC'){
   return (Array.isArray(items)?items:[]).filter(x=>x&&typeof x.datetime==='string')
     .map(x=>({...x,day:wpDayKey(x.datetime,zone)})).filter(x=>x.day&&x.day>today)
     .sort((a,b)=>a.day.localeCompare(b.day))
-    .filter(x=>{if(seen.has(x.day))return false;seen.add(x.day);return true;}).slice(0,3);
+    .filter(x=>{if(seen.has(x.day))return false;seen.add(x.day);return true;}).slice(0,6);
 }
 function wpNextHours(items,now=new Date()){
   const from=now.getTime()-35*60000,seen=new Set();
@@ -102,6 +102,12 @@ function wpNextHours(items,now=new Date()){
 }
 function wpLocalLabel(datetime,config,zone){
   return new Intl.DateTimeFormat('it-IT',{...config,timeZone:zone}).format(new Date(datetime));
+}
+function wpDaysTitle(n){return n===0?'prossimi giorni':n===1?'prossimo giorno':`prossimi ${n} giorni`;}
+function wpDaysDots(n){
+  const pages=Math.ceil(n/3);if(pages<2)return '';
+  return `<div class="wp-dots" role="group" aria-label="Pagine delle previsioni giornaliere">${Array.from({length:pages},(_,i)=>
+    `<button type="button" class="wp-dot" data-page="${i}" aria-label="Giorni ${i*3+1}–${Math.min(n,i*3+3)}" aria-current="${i===0}"></button>`).join('')}</div>`;
 }
 function wpDayTile(day,unit,zone){
   const [mdi]=wpCondition(day.condition),hi=wpNumber(day.temperature),lo=wpNumber(day.templow);
@@ -339,9 +345,9 @@ const WP_CSS = `
 :host{display:block;box-sizing:border-box;width:100%;max-width:100%;min-width:0;font-family:var(--ha-font-family-body,Roboto,Arial,sans-serif);color:var(--wp-fg);font-size:var(--ha-font-size-m,14px)}
 *,*:before,*:after{box-sizing:border-box}
 .wp-container{display:block;width:100%;max-width:100%;min-width:0;container-type:inline-size}
-.wp-shell{--wp-accent:#0a7156;--wp-bg:#fafbf9;--wp-tile:#f0f2ef;--wp-circle:#fff;--wp-line:#e0e5df;--wp-fg:#18221c;--wp-muted:#56675c;background:var(--wp-bg);color:var(--wp-fg);border:1px solid var(--wp-line);border-radius:26px;padding:18px;width:100%;max-width:100%;min-width:0}
-.wp-backdrop{--wp-accent:#0a7156;--wp-bg:#fafbf9;--wp-tile:#f0f2ef;--wp-circle:#fff;--wp-line:#e0e5df;--wp-fg:#18221c;--wp-muted:#56675c}
-.wp-shell.wp-dark,.wp-backdrop.wp-dark{--wp-accent:#0e795d;--wp-bg:#101211;--wp-tile:#191c1a;--wp-circle:#282b29;--wp-line:#2b302c;--wp-fg:#f5f7f4;--wp-muted:#bbc5bd}
+.wp-shell{--wp-btn-fg:var(--wp-accent);--wp-accent:#0a7156;--wp-bg:#fafbf9;--wp-tile:#f0f2ef;--wp-circle:#fff;--wp-line:#e0e5df;--wp-fg:#18221c;--wp-muted:#56675c;background:var(--wp-bg);color:var(--wp-fg);border:1px solid var(--wp-line);border-radius:26px;padding:18px;width:100%;max-width:100%;min-width:0}
+.wp-backdrop{--wp-btn-fg:var(--wp-accent);--wp-accent:#0a7156;--wp-bg:#fafbf9;--wp-tile:#f0f2ef;--wp-circle:#fff;--wp-line:#e0e5df;--wp-fg:#18221c;--wp-muted:#56675c}
+.wp-shell.wp-dark,.wp-backdrop.wp-dark{--wp-btn-fg:var(--wp-fg);--wp-accent:#0e795d;--wp-bg:#101211;--wp-tile:#191c1a;--wp-circle:#282b29;--wp-line:#2b302c;--wp-fg:#f5f7f4;--wp-muted:#bbc5bd}
 .wp-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin:2px 4px 17px}
 .wp-eyebrow{font-size:10px;letter-spacing:1.7px;font-weight:750;color:var(--wp-muted);margin-bottom:7px}
 .wp-title{font-size:25px;line-height:1.14;font-weight:780;letter-spacing:-.7px;overflow-wrap:anywhere}
@@ -357,23 +363,33 @@ const WP_CSS = `
 .wp-sub{font-size:11.5px;line-height:1.4;color:var(--wp-muted);margin-top:3px}
 .wp-location{display:inline-flex;gap:4px;align-items:center;color:var(--wp-muted);font-size:11px;margin-top:7px}
 .wp-location ha-icon{--mdc-icon-size:14px;width:14px;height:14px}
-.wp-detail{display:inline-flex;align-items:center;justify-content:center;vertical-align:top;gap:5px;border:0;border-radius:999px;color:#fff;background:var(--wp-accent);padding:5px 9px;margin:12px 0 0;font-family:inherit;font-size:11px;font-weight:650;line-height:1.2;cursor:pointer;white-space:nowrap}
-.wp-detail ha-icon{display:block;flex:none;margin:0;--mdc-icon-size:14px;width:14px;height:14px;color:inherit}
+.wp-foot{margin-top:14px}
+.wp-detail{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:44px;padding:10px 14px;border-radius:999px;font-family:inherit;font-weight:600;font-size:13.5px;line-height:1.2;cursor:pointer;color:var(--wp-btn-fg);border:1px solid color-mix(in srgb,var(--wp-accent) 45%,transparent);background:color-mix(in srgb,var(--wp-accent) 12%,transparent)}
+.wp-detail:hover{background:color-mix(in srgb,var(--wp-accent) 22%,transparent)}
+.wp-detail ha-icon{display:block;flex:none;margin:0;--mdc-icon-size:18px;width:18px;height:18px;color:inherit}
 button{font:inherit;cursor:pointer}button:focus-visible{outline:2px solid var(--wp-accent);outline-offset:3px}
 .wp-empty{color:var(--wp-muted);font-size:12px;line-height:1.45}
-.wp-backdrop{position:fixed;inset:0;z-index:9999;background:#0009;display:grid;place-items:center;overflow:hidden;padding:max(24px,env(safe-area-inset-top)) 24px max(24px,env(safe-area-inset-bottom))}
-.wp-dialog{background:var(--wp-bg);color:var(--wp-fg);border:1px solid var(--wp-line);border-radius:26px;box-shadow:0 18px 60px #0005;padding:20px;width:min(390px,100%);max-width:100%;min-width:0;max-height:min(82vh,720px);max-height:min(82dvh,720px);overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;font-family:inherit;font-size:inherit}
-.wp-dialog-head{display:flex;align-items:center;gap:10px;min-height:38px;margin-bottom:10px}
-.wp-dialog-head strong{flex:1;font-size:17px;font-weight:600;line-height:1.3}
-.wp-close{display:flex;align-items:center;justify-content:center;line-height:0;margin:0;padding:0;width:36px;height:36px;flex:none;border:0;border-radius:50%;background:var(--wp-tile);color:var(--wp-fg)}
+.wp-backdrop{position:fixed;inset:0;overscroll-behavior:contain;z-index:9999;background:#0009;display:flex;align-items:center;justify-content:center;padding:max(16px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(16px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left))}
+.wp-dialog{width:min(390px,100%);max-width:100%;min-width:0;max-height:min(88vh,680px);max-height:min(88dvh,680px);display:flex;flex-direction:column;background:var(--wp-bg);color:var(--wp-fg);border:1px solid var(--wp-line);border-radius:26px;overflow:hidden;box-shadow:0 18px 60px #0005;font-family:inherit;font-size:inherit}
+.wp-mhead{flex:none;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 16px 12px 18px;background:var(--wp-bg);border-bottom:1px solid var(--wp-line)}
+.wp-mtitle{flex:1;min-width:0;margin:0;font-size:17px;font-weight:600;line-height:1.3;overflow-wrap:anywhere}
+.wp-mbody{overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:12px 18px 18px;min-width:0}
+.wp-mbody>.wp-detail-heading:first-child{margin-top:4px}
+.wp-close{display:grid;place-items:center;line-height:0;margin:0;padding:0;width:40px;height:40px;flex:none;border:1px solid var(--wp-line);border-radius:50%;background:var(--wp-tile);color:var(--wp-fg)}
 .wp-close ha-icon{display:block;flex:none;margin:0;--mdc-icon-size:18px;width:18px;height:18px}
 .wp-metric{display:flex;justify-content:space-between;align-items:center;gap:12px;background:var(--wp-tile);border:1px solid var(--wp-line);padding:12px 14px;border-radius:14px;margin-top:8px}
 .wp-metric span{color:var(--wp-muted);font-size:12px}
 .wp-metric strong{font-size:13px;font-weight:600}
 
 .wp-forecast-heading{margin:17px 4px 10px;color:var(--wp-muted);font-size:10px;letter-spacing:1.3px;font-weight:600}
-.wp-days{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
-.wp-day{display:flex;flex-direction:column;align-items:center;gap:7px;min-width:0;padding:10px 4px;border-radius:16px;border:1px solid var(--wp-line);background:var(--wp-circle);font-size:11px}
+.wp-days{--wp-gap:8px;display:flex;gap:var(--wp-gap);overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.wp-days::-webkit-scrollbar{display:none}.wp-days:focus-visible{outline:2px solid var(--wp-accent);outline-offset:3px;border-radius:16px}
+.wp-dots{display:flex;justify-content:center;gap:0;margin-top:8px}
+.wp-dot{position:relative;display:grid;place-items:center;width:14px;height:12px;padding:0;border:0;background:none}
+.wp-dot:after{content:"";position:absolute;inset:-12px -1px}
+.wp-dot:before{content:"";width:6px;height:6px;border-radius:50%;background:color-mix(in srgb,var(--wp-muted) 45%,transparent)}
+.wp-dot[aria-current="true"]:before{background:var(--wp-accent)}
+.wp-day{flex:0 0 calc((100% - 2*var(--wp-gap))/3);scroll-snap-align:start;display:flex;flex-direction:column;align-items:center;gap:7px;min-width:0;padding:10px 4px;border-radius:16px;border:1px solid var(--wp-line);background:var(--wp-circle);font-size:11px}
 .wp-day>span{color:var(--wp-muted)}.wp-day ha-icon{--mdc-icon-size:24px;width:24px;height:24px}
 .wp-day strong{font-size:12px;font-weight:600}.wp-day small{font-size:11px;color:var(--wp-muted);margin-left:5px}
 .wp-forecast-note{color:var(--wp-muted);font-size:11px;line-height:1.45}
@@ -433,10 +449,9 @@ button{font:inherit;cursor:pointer}button:focus-visible{outline:2px solid var(--
 .wp-moon strong{font-size:12px;font-weight:600}.wp-moon-label{color:var(--wp-muted);font-size:11px;margin-top:4px}
 @media(max-width:420px){.wp-shell{padding:13px;border-radius:23px}.wp-title{font-size:23px}.wp-head{gap:7px}.wp-datetime{font-size:10px}.wp-clock{font-size:19px}.wp-orb{width:43px;height:43px}.wp-temp{font-size:25px}.wp-panel{padding:10px}}
 @container (max-width:380px){.wp-shell{padding:13px;border-radius:23px}.wp-title{font-size:23px}.wp-head{gap:7px}.wp-datetime{font-size:10px}.wp-clock{font-size:19px}.wp-orb{width:43px;height:43px}.wp-temp{font-size:25px}.wp-panel{padding:10px}}
-@container (max-width:310px){.wp-shell{padding:10px}.wp-head{margin:2px 0 12px}.wp-title{font-size:21px}.wp-eyebrow{font-size:9px}.wp-current{gap:8px}.wp-orb{width:37px;height:37px}.wp-orb ha-icon{--mdc-icon-size:25px;width:25px;height:25px}.wp-days{gap:5px}.wp-day{padding:8px 2px;gap:5px}.wp-sun-cards{grid-template-columns:1fr}.wp-sun-card{padding:8px}.wp-panel{padding:8px}.wp-detail{white-space:normal}}
-@media(max-width:599px){.wp-backdrop{padding:max(20px,env(safe-area-inset-top)) 18px max(20px,env(safe-area-inset-bottom))}.wp-dialog{width:min(350px,100%);max-height:min(68vh,560px);max-height:min(68dvh,560px);border-radius:24px;padding:18px}}
+@container (max-width:310px){.wp-shell{padding:10px}.wp-head{margin:2px 0 12px}.wp-title{font-size:21px}.wp-eyebrow{font-size:9px}.wp-current{gap:8px}.wp-orb{width:37px;height:37px}.wp-orb ha-icon{--mdc-icon-size:25px;width:25px;height:25px}.wp-days{--wp-gap:5px}.wp-day{padding:8px 2px;gap:5px}.wp-sun-cards{grid-template-columns:1fr}.wp-sun-card{padding:8px}.wp-panel{padding:8px}}
 @media(max-height:480px){.wp-dialog{max-height:calc(100vh - 32px);max-height:calc(100dvh - 32px)}}
-@media(prefers-reduced-motion:reduce){.wp-detail{transition:none}}
+@media(prefers-reduced-motion:no-preference){.wp-detail{transition:background .15s}}
 `;
 
 class WeatherPulseCard extends HTMLElement {
@@ -458,13 +473,20 @@ class WeatherPulseCard extends HTMLElement {
     this._forecastVersion = 0;
     this._media = typeof window.matchMedia === 'function' ? window.matchMedia('(prefers-color-scheme: dark)') : null;
     this._onAppearance = () => { this._lastSignature=''; this._paint(); };
+    this._pendingFocus = '';
+    this._onKey = e => this._key(e);
     this.shadowRoot.addEventListener('click', e => {
-      if (e.target?.dataset?.backdrop === '1' || e.target.closest('[data-close]')) { this._open=false; this._lastSignature=''; this._paint(); return; }
-      if (e.target.closest('[data-open]')) { this._open=true; this._lastSignature=''; this._paint(); }
+      const t = e.target;
+      if (!t || !t.closest) return;
+      if (t.dataset?.backdrop === '1' || t.closest('[data-close]')) { this._closePopup(); return; }
+      const dot = t.closest('[data-page]');
+      if (dot) { this._goPage(Number(dot.dataset.page)); return; }
+      if (t.closest('[data-open]')) this._openPopup();
     });
-    this.shadowRoot.addEventListener('keydown', e => {
-      if (e.key === 'Escape' && this._open) { this._open=false; this._lastSignature=''; this._paint(); }
-    });
+    // scroll events do not bubble: capture them to keep the page dots in sync with the swipe
+    this.shadowRoot.addEventListener('scroll', e => {
+      if (e.target?.classList?.contains('wp-days')) this._syncDots(e.target);
+    }, true);
   }
   connectedCallback() {
     this._media?.addEventListener?.('change', this._onAppearance);
@@ -473,6 +495,7 @@ class WeatherPulseCard extends HTMLElement {
     this._paint();
   }
   disconnectedCallback() {
+    document.removeEventListener('keydown', this._onKey);
     this._media?.removeEventListener?.('change', this._onAppearance);
     if (this._clockTimer !== null) window.clearInterval(this._clockTimer);
     this._clockTimer = null;
@@ -533,6 +556,67 @@ class WeatherPulseCard extends HTMLElement {
       (this._config.theme_mode === 'auto' && (typeof this._hass?.themes?.darkMode === 'boolean' ? this._hass.themes.darkMode : !!this._media?.matches));
   }
 
+  _activeKey() {
+    const el = this.shadowRoot.activeElement;
+    return el && el.getAttribute ? (el.getAttribute('data-focus') || '') : '';
+  }
+  _openPopup() {
+    if (this._open) return;
+    this._open = true; this._pendingFocus = 'close'; this._lastSignature = '';
+    document.addEventListener('keydown', this._onKey); this._paint();
+  }
+  _closePopup() {
+    if (!this._open) return;
+    this._open = false; this._pendingFocus = 'open'; this._lastSignature = '';
+    document.removeEventListener('keydown', this._onKey); this._paint();
+  }
+  _key(event) {
+    if (!this._open) return;
+    if (event.key === 'Escape') { this._closePopup(); return; }
+    const inBody = event.composedPath().some(n => n.classList && n.classList.contains('wp-mbody'));
+    if (['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '].includes(event.key) && !inBody) { event.preventDefault(); return; }
+    if (event.key !== 'Tab') return;
+    const nodes = [...this.shadowRoot.querySelectorAll('.wp-dialog button')];
+    if (!nodes.length) return;
+    const first = nodes[0], last = nodes[nodes.length - 1], active = this.shadowRoot.activeElement;
+    if (event.shiftKey && (active === first || !active)) { event.preventDefault(); last.focus({ preventScroll: true }); }
+    else if (!event.shiftKey && (active === last || !active)) { event.preventDefault(); first.focus({ preventScroll: true }); }
+  }
+  // While the popup is open the dashboard behind must not move. Horizontal gestures on the
+  // hourly strip are left alone so the strip stays swipeable.
+  _lockScroll() {
+    const overlay = this.shadowRoot.querySelector('.wp-backdrop');
+    if (!overlay) return;
+    const body = overlay.querySelector('.wp-mbody');
+    const atEdge = dy => !body || (dy < 0 && body.scrollTop <= 0) || (dy > 0 && body.scrollTop + body.clientHeight >= body.scrollHeight - 1);
+    const inStrip = e => e.composedPath().some(n => n.classList && n.classList.contains('wp-hour-scroll'));
+    overlay.addEventListener('wheel', e => {
+      if (inStrip(e) && (e.shiftKey || Math.abs(e.deltaX) >= Math.abs(e.deltaY))) return;
+      if (!body || !body.contains(e.target) || atEdge(e.deltaY)) e.preventDefault();
+    }, { passive: false });
+    let x = 0, y = 0;
+    overlay.addEventListener('touchstart', e => { const t = e.touches[0]; x = t ? t.clientX : 0; y = t ? t.clientY : 0; }, { passive: true });
+    overlay.addEventListener('touchmove', e => {
+      const t = e.touches[0], dx = x - (t ? t.clientX : x), dy = y - (t ? t.clientY : y);
+      if (inStrip(e) && Math.abs(dx) > Math.abs(dy)) return;
+      if (!body || !body.contains(e.target) || atEdge(dy)) e.preventDefault();
+    }, { passive: false });
+  }
+  _syncDots(scroller) {
+    const dots = this.shadowRoot.querySelectorAll('.wp-dot');
+    if (!scroller || !dots.length) return;
+    const max = scroller.scrollWidth - scroller.clientWidth;
+    const page = max > 0 ? Math.round(scroller.scrollLeft / max * (dots.length - 1)) : 0;
+    dots.forEach((d, i) => d.setAttribute('aria-current', String(i === page)));
+  }
+  _goPage(page) {
+    const sc = this.shadowRoot.querySelector('.wp-days'), dots = this.shadowRoot.querySelectorAll('.wp-dot');
+    if (!sc || !dots.length) return;
+    const max = sc.scrollWidth - sc.clientWidth;
+    const smooth = !(window.matchMedia && window.matchMedia('(prefers-reduced-motion:reduce)').matches);
+    sc.scrollTo({ left: dots.length > 1 ? max * page / (dots.length - 1) : 0, behavior: smooth ? 'smooth' : 'auto' });
+  }
+
   _popup(entity){
     const a=wpKnown(entity)?entity.attributes||{}:{};
     const unit=wpText(a.temperature_unit||this._hass?.config?.unit_system?.temperature||'°C',8);
@@ -553,15 +637,17 @@ class WeatherPulseCard extends HTMLElement {
         <div class="wp-sub">Max ${wpNumber(d.temperature)===null?'—':wpEscape(wpTemp(d.temperature,unit))} ·
         Min ${wpNumber(d.templow)===null?'—':wpEscape(wpTemp(d.templow,unit))}${rain.length?' · '+rain.map(wpEscape).join(' · '):''}</div></div>`;
     }).join(''):'<div class="wp-empty">Previsioni giornaliere non disponibili.</div>';
-    return `<div class="wp-backdrop ${this._isDark()?'wp-dark':'wp-light'}" data-backdrop="1"><div class="wp-dialog" role="dialog" aria-modal="true" aria-label="Dettagli meteo">
-      <div class="wp-dialog-head"><strong>Dettagli meteo</strong><button type="button" class="wp-close" data-close="1" aria-label="Chiudi">${wpIcon('close')}</button></div>
+    return `<div class="wp-backdrop ${this._isDark()?'wp-dark':'wp-light'}" data-backdrop="1"><div class="wp-dialog" role="dialog" aria-modal="true" aria-labelledby="wp-mt">
+      <div class="wp-mhead"><h2 class="wp-mtitle" id="wp-mt">Dettagli meteo</h2><button type="button" class="wp-close" data-close="1" data-focus="close" aria-label="Chiudi">${wpIcon('close')}</button></div>
+      <div class="wp-mbody">
       <div class="wp-detail-heading">Prossime 8 ore</div>${hourly}
-      <div class="wp-detail-heading">Prossimi 3 giorni</div>${daily}
+      <div class="wp-detail-heading">${wpDaysTitle(days.length).replace(/^./,c=>c.toUpperCase())}</div>${daily}
       <div class="wp-detail-heading">${this._config.moon_entity?"Sole e luna":"Sole"}</div>${wpSolarArc(sun,zone)}
       ${this._config.moon_entity?wpMoonDetails(this._hass?.states?.[this._config.moon_entity]):""}
       ${this._config.alert_entity?`<div class="wp-detail-heading">Allerte meteorologiche</div>${wpAlertDetails(alert,zone)}`:""}
       <div class="wp-detail-heading">Condizioni attuali</div>
       ${metrics.map(([label,value])=>`<div class="wp-metric"><span>${wpEscape(label)}</span><strong>${wpEscape(value)}</strong></div>`).join('')}
+      </div>
     </div></div>`;
   }
 
@@ -582,10 +668,16 @@ class WeatherPulseCard extends HTMLElement {
     const days=wpNextDays(this._forecast.daily,now,zone);
     const sun=wpSolarDay(now,zone,this._hass?.config?.latitude,this._hass?.config?.longitude,this._hass?.states?.['sun.sun']);
     const alert=this._alert();
+    const daysHeading=`<div class="wp-forecast-heading">${wpDaysTitle(days.length).toUpperCase()}</div>`;
     const daySection=!this._config.weather_entity?'':days.length?
-      '<div class="wp-forecast-heading">PROSSIMI 3 GIORNI</div><div class="wp-days">'+days.map(d=>wpDayTile(d,unit,zone)).join('')+'</div>':
-      '<div class="wp-forecast-heading">PROSSIMI 3 GIORNI</div><div class="wp-forecast-note">'+
+      daysHeading+'<div class="wp-days" tabindex="0" role="group" aria-label="Previsioni giornaliere, scorri per vedere gli altri giorni">'+days.map(d=>wpDayTile(d,unit,zone)).join('')+'</div>'+wpDaysDots(days.length):
+      daysHeading+'<div class="wp-forecast-note">'+
       (this._forecastState.daily==='loading'?'Caricamento previsioni…':'Previsioni non disponibili.')+'</div>';
+    // a repaint rebuilds the shadow DOM: keep popup scroll, strip scroll and focus where they were
+    const sr = this.shadowRoot, q = sel => sr.querySelector(sel);
+    const keep = { body: q('.wp-mbody')?.scrollTop || 0, hours: q('.wp-hour-scroll')?.scrollLeft || 0, days: q('.wp-days')?.scrollLeft || 0 };
+    const want = this._pendingFocus || this._activeKey();
+    this._pendingFocus = '';
     this.shadowRoot.innerHTML = `<style>${WP_CSS}</style>
       <div class="wp-container"><div class="wp-shell ${this._isDark()?'wp-dark':'wp-light'}">
         <div class="wp-head"><div><div class="wp-eyebrow">${wpEscape(this._config.eyebrow)}</div>
@@ -602,9 +694,14 @@ class WeatherPulseCard extends HTMLElement {
           ${this._config.alert_entity?wpAlertBanner(alert):""}
           ${this._config.weather_entity ? '' : '<div class="wp-empty">Seleziona un’entità meteo nell’editor della card.</div>'}
         </div>
-        <button type="button" class="wp-detail" data-open="1">${wpIcon('information-outline')} Dettagli e stato</button>
+        <div class="wp-foot"><button type="button" class="wp-detail" data-open="1" data-focus="open">Dettagli e stato ${wpIcon('chevron-right')}</button></div>
       </div></div>
       ${this._open ? this._popup(entity) : ''}`;
+    if (q('.wp-mbody')) q('.wp-mbody').scrollTop = keep.body;
+    if (q('.wp-hour-scroll')) q('.wp-hour-scroll').scrollLeft = keep.hours;
+    if (q('.wp-days')) { q('.wp-days').scrollLeft = keep.days; this._syncDots(q('.wp-days')); }
+    this._lockScroll();
+    if (want) q(`[data-focus="${want}"]`)?.focus({ preventScroll: true });
   }
 }
 const WP_EDITOR_CSS=`
