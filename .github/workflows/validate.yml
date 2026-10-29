@@ -1,16 +1,6 @@
 name: Validate Weather Pulse Card
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "src/**"
-      - "dist/**"
-      - "tests/**"
-      - "package.json"
-      - ".github/workflows/validate.yml"
-  pull_request:
-    branches: [main]
   workflow_dispatch:
 
 permissions:
